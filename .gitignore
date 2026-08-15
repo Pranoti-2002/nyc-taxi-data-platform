@@ -1,0 +1,81 @@
+# =========================
+# Python
+# =========================
+
+__pycache__/
+*.py[cod]
+*.pyo
+
+# =========================
+# Virtual Environment
+# =========================
+
+.venv/
+venv/
+env/
+
+# =========================
+# Environment Variables
+# =========================
+
+.env
+
+# =========================
+# Data
+# =========================
+
+data/bronze/*
+data/silver/*
+data/gold/*
+
+# Keep folder structure
+!data/bronze/.gitkeep
+!data/silver/.gitkeep
+!data/gold/.gitkeep
+
+# Parquet files
+*.parquet
+
+# =========================
+# Airflow
+# =========================
+
+airflow.cfg
+airflow.db
+logs/
+
+# =========================
+# Spark
+# =========================
+
+.sparkStaging/
+metastore_db/
+derby.log
+
+# =========================
+# IDE
+# =========================
+
+.vscode/
+.idea/
+
+# =========================
+# Testing
+# =========================
+
+.pytest_cache/
+.mypy_cache/
+
+# =========================
+# OS
+# =========================
+
+.DS_Store
+Thumbs.db
+
+# =========================
+# Temporary
+# =========================
+
+tmp/
+temp/
