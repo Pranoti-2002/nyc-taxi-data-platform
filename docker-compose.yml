@@ -1,0 +1,291 @@
+x-airflow-build: &airflow-build
+  build:
+    context: .
+    dockerfile: docker/airflow/Dockerfile
+
+x-spark-build: &spark-build
+  build:
+    context: .
+    dockerfile: docker/spark/Dockerfile
+
+
+services:
+
+  # ==========================================================
+  # PostgreSQL - Airflow Metadata Database
+  # ==========================================================
+
+  postgres:
+    image: postgres:15
+    container_name: nyc_taxi_postgres
+
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  # ==========================================================
+  # Airflow Initialization - One-time setup
+  # ==========================================================
+
+  airflow-init:
+    <<: *airflow-build
+
+    container_name: nyc_taxi_airflow_init
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    environment:
+      AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW_HOME: /opt/airflow
+      PYTHONPATH: /opt/project
+
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+      - ./generic_scripts:/opt/project/generic_scripts
+      - ./src:/opt/project/src
+      - ./data:/opt/project/data
+
+    command:
+      - bash
+      - -c
+      - |
+        airflow db migrate
+        airflow users create \
+          --username admin \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com \
+          --password admin || true  
+
+
+  # ==========================================================
+  # Airflow API Server
+  # ==========================================================
+
+  airflow-apiserver:
+    <<: *airflow-build
+
+    container_name: nyc_taxi_airflow_apiserver
+
+    command:
+      - api-server
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW_HOME: /opt/airflow
+      PYTHONPATH: /opt/project
+
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+      - ./generic_scripts:/opt/project/generic_scripts
+      - ./src:/opt/project/src
+      - ./data:/opt/project/data
+
+    ports:
+      - "8080:8080"
+
+
+  # ==========================================================
+  # Airflow Scheduler
+  # ==========================================================
+
+  airflow-scheduler:
+    <<: *airflow-build
+
+    container_name: nyc_taxi_airflow_scheduler
+
+    command:
+      - scheduler
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW_HOME: /opt/airflow
+      PYTHONPATH: /opt/project
+
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+      - ./generic_scripts:/opt/project/generic_scripts
+      - ./src:/opt/project/src
+      - ./data:/opt/project/data
+
+
+  # ==========================================================
+  # Airflow DAG Processor
+  # ==========================================================
+
+  airflow-dag-processor:
+    <<: *airflow-build
+
+    container_name: nyc_taxi_airflow_dag_processor
+
+    command:
+      - dag-processor
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW_HOME: /opt/airflow
+      PYTHONPATH: /opt/project
+
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+      - ./generic_scripts:/opt/project/generic_scripts
+      - ./src:/opt/project/src
+      - ./data:/opt/project/data
+
+
+  # ==========================================================
+  # Airflow Triggerer
+  # ==========================================================
+
+  airflow-triggerer:
+    <<: *airflow-build
+
+    container_name: nyc_taxi_airflow_triggerer
+
+    command:
+      - triggerer
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW_HOME: /opt/airflow
+      PYTHONPATH: /opt/project
+
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+      - ./generic_scripts:/opt/project/generic_scripts
+      - ./src:/opt/project/src
+      - ./data:/opt/project/data
+
+
+  # ==========================================================
+  # Spark Master
+  # ==========================================================
+
+  spark-master:
+    <<: *spark-build
+
+    container_name: nyc_taxi_spark_master
+    hostname: spark-master
+
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.master.Master
+
+    ports:
+      - "7077:7077"
+      - "8081:8080"
+
+    volumes:
+      - ./src:/opt/project/src
+      - ./data:/opt/project/data
+
+
+  # ==========================================================
+  # Spark Worker
+  # ==========================================================
+
+  spark-worker:
+    <<: *spark-build
+
+    container_name: nyc_taxi_spark_worker
+    hostname: spark-worker
+
+    depends_on:
+      - spark-master
+
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.worker.Worker
+      - spark://spark-master:7077
+
+    environment:
+      SPARK_WORKER_CORES: 2
+      SPARK_WORKER_MEMORY: 2G
+
+    volumes:
+      - ./src:/opt/project/src
+      - ./data:/opt/project/data
+
+
+  # ==========================================================
+  # pgAdmin
+  # ==========================================================
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: nyc_taxi_pgadmin
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+
+    ports:
+      - "5050:80"
+
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+
+# ============================================================
+# Volumes
+# ============================================================
+
+volumes:
+  postgres_data:
+  pgadmin_data:
