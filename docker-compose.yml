@@ -29,6 +29,7 @@ services:
 
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
@@ -98,6 +99,7 @@ services:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077
       AIRFLOW_HOME: /opt/airflow
       PYTHONPATH: /opt/project
 
@@ -133,6 +135,7 @@ services:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077
       AIRFLOW_HOME: /opt/airflow
       PYTHONPATH: /opt/project
 
@@ -165,6 +168,7 @@ services:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077
       AIRFLOW_HOME: /opt/airflow
       PYTHONPATH: /opt/project
 
@@ -197,6 +201,7 @@ services:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077
       AIRFLOW_HOME: /opt/airflow
       PYTHONPATH: /opt/project
 
@@ -265,7 +270,7 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: nyc_taxi_pgadmin
+    container_name: nyc_taxi_pgadminW
 
     depends_on:
       postgres:
@@ -281,6 +286,94 @@ services:
     volumes:
       - pgadmin_data:/var/lib/pgadmin
 
+  # ==========================================================
+  # Hive
+  # ==========================================================
+
+  hive:
+    build:
+      context: .
+      dockerfile: docker/hive/Dockerfile
+    container_name: hive_database
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    environment:
+      SERVICE_NAME: metastore
+      DB_DRIVER: postgres
+      HADOOP_CLASSPATH: /opt/hive/lib/*
+      HIVE_AUX_JARS_PATH: /opt/hive/lib/postgresql.jar
+      SERVICE_OPTS: >-
+        -Djavax.jdo.option.ConnectionDriverName=org.postgresql.Driver
+        -Djavax.jdo.option.ConnectionURL=jdbc:postgresql://postgres:5432/metastore
+        -Djavax.jdo.option.ConnectionUserName=hiveuser
+        -Djavax.jdo.option.ConnectionPassword=hivepassword
+
+    ports:
+      - "9083:9083"
+
+    volumes:
+      - hive_data:/opt/hive/data
+
+  # ==========================================================
+  # HiveServer2 - SQL endpoint for Hue
+  # ==========================================================
+
+  hiveserver2:
+    build:
+      context: .
+      dockerfile: docker/hive/Dockerfile
+    container_name: hive_server2
+
+    depends_on:
+      hive:
+        condition: service_started
+
+    environment:
+      SERVICE_NAME: hiveserver2
+      SERVICE_OPTS: >-
+        -Dhive.metastore.uris=thrift://hive:9083
+        -Dhive.server2.webui.port=0
+      IS_RESUME: "true"
+
+    ports:
+      - "10000:10000"
+
+    volumes:
+      - hive_data:/opt/hive/data
+
+  # ==========================================================
+  # Hue - SQL editor and data warehouse UI
+  # ==========================================================
+
+  hue:
+    image: gethue/hue:latest
+    container_name: hue
+
+    depends_on:
+      hue-init:
+        condition: service_completed_successfully
+      hiveserver2:
+        condition: service_started
+
+    ports:
+      - "8888:8888"
+
+    volumes:
+      - ./config/hue.ini:/usr/share/hue/desktop/conf/z-hue.ini:ro
+      - hue_data:/var/lib/hue
+
+  hue-init:
+    image: gethue/hue:latest
+    container_name: hue_init
+    user: root
+    entrypoint: ["sh", "-c"]
+    command: ["mkdir -p /var/lib/hue && chown -R 1001:1000 /var/lib/hue"]
+    volumes:
+      - hue_data:/var/lib/hue
+
 
 # ============================================================
 # Volumes
@@ -289,3 +382,5 @@ services:
 volumes:
   postgres_data:
   pgadmin_data:
+  hive_data:
+  hue_data:

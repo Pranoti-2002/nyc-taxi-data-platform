@@ -1,3 +1,5 @@
+FROM apache/spark:3.5.5 AS spark-client
+
 FROM apache/airflow:3.0.0-python3.11
 
 USER root
@@ -11,13 +13,20 @@ RUN apt-get update \
 
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
+ENV SPARK_HOME=/opt/spark
+ENV PATH="${SPARK_HOME}/bin:${PATH}"
+
+COPY --from=spark-client /opt/spark "${SPARK_HOME}"
 
 COPY docker/airflow/requirements.txt /tmp/requirements.txt
+COPY docker/airflow/constraints-3.11.txt /tmp/constraints.txt
 
 USER airflow
 
 RUN pip install --no-cache-dir \
-    --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-3.0.0/constraints-3.11.txt" \
+    --default-timeout=300 \
+    --retries=10 \
+    --constraint /tmp/constraints.txt \
     -r /tmp/requirements.txt
 
 USER root
