@@ -99,7 +99,6 @@ services:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
-      AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077
       AIRFLOW_HOME: /opt/airflow
       PYTHONPATH: /opt/project
 
@@ -135,7 +134,6 @@ services:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
-      AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077
       AIRFLOW_HOME: /opt/airflow
       PYTHONPATH: /opt/project
 
@@ -168,7 +166,6 @@ services:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
-      AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077
       AIRFLOW_HOME: /opt/airflow
       PYTHONPATH: /opt/project
 
@@ -201,7 +198,6 @@ services:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
-      AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077
       AIRFLOW_HOME: /opt/airflow
       PYTHONPATH: /opt/project
 

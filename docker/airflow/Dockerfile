@@ -1,5 +1,3 @@
-FROM apache/spark:3.5.5 AS spark-client
-
 FROM apache/airflow:3.0.0-python3.11
 
 USER root
@@ -13,10 +11,6 @@ RUN apt-get update \
 
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
-ENV SPARK_HOME=/opt/spark
-ENV PATH="${SPARK_HOME}/bin:${PATH}"
-
-COPY --from=spark-client /opt/spark "${SPARK_HOME}"
 
 COPY docker/airflow/requirements.txt /tmp/requirements.txt
 COPY docker/airflow/constraints-3.11.txt /tmp/constraints.txt
