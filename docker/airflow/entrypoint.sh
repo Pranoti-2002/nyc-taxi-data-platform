@@ -9,9 +9,6 @@ echo ""
 echo "Java version:"
 java -version
 
-echo ""
-echo "Spark version:"
-/opt/spark/bin/spark-submit --version
 
 echo ""
 echo "Starting Airflow:"
