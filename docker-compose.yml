@@ -50,6 +50,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    
+    env_file:
+      - .env
 
     environment:
       AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
@@ -95,6 +98,9 @@ services:
       postgres:
         condition: service_healthy
 
+    env_file:
+      - .env
+
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
@@ -130,6 +136,9 @@ services:
       postgres:
         condition: service_healthy
 
+    env_file:
+      - .env
+
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
@@ -161,6 +170,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+    env_file:
+      - .env
 
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -194,6 +206,9 @@ services:
       postgres:
         condition: service_healthy
 
+    env_file:
+      - .env
+
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
@@ -220,6 +235,9 @@ services:
     container_name: nyc_taxi_spark_master
     hostname: spark-master
 
+    env_file:
+      - .env
+
     command:
       - /opt/spark/bin/spark-class
       - org.apache.spark.deploy.master.Master
@@ -245,6 +263,9 @@ services:
 
     depends_on:
       - spark-master
+    
+    env_file:
+      - .env
 
     command:
       - /opt/spark/bin/spark-class
