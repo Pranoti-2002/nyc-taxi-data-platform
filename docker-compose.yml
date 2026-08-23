@@ -317,6 +317,9 @@ services:
       postgres:
         condition: service_healthy
 
+    env_file:
+      - .env
+
     environment:
       SERVICE_NAME: metastore
       DB_DRIVER: postgres
@@ -348,7 +351,11 @@ services:
       hive:
         condition: service_started
 
+    env_file:
+      - .env
+
     environment:
+      HADOOP_CLASSPATH: "/opt/hive/lib/*"
       SERVICE_NAME: hiveserver2
       SERVICE_OPTS: >-
         -Dhive.metastore.uris=thrift://hive:9083
