@@ -342,7 +342,7 @@ services:
     build:
       context: .
       dockerfile: docker/hive/Dockerfile
-    container_name: hive_server2
+    container_name: hiveserver2
 
     depends_on:
       hive:
