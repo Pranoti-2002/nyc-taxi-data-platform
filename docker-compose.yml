@@ -304,7 +304,7 @@ services:
       - pgadmin_data:/var/lib/pgadmin
 
   # ==========================================================
-  # Hive
+  # Hive Metastore
   # ==========================================================
 
   hive:
@@ -366,14 +366,16 @@ services:
   # ==========================================================
 
   hue:
-    image: gethue/hue:latest
+    image: gethue/hue:4.11.0
     container_name: hue
 
     depends_on:
-      hue-init:
-        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
       hiveserver2:
         condition: service_started
+      hue-init:
+        condition: service_completed_successfully
 
     ports:
       - "8888:8888"
@@ -382,12 +384,24 @@ services:
       - ./config/hue.ini:/usr/share/hue/desktop/conf/z-hue.ini:ro
       - hue_data:/var/lib/hue
 
+
+  # ==========================================================
+  # Hue initialization
+  # ==========================================================
   hue-init:
-    image: gethue/hue:latest
+    image: gethue/hue:4.11.0
+
     container_name: hue_init
+
+    entrypoint:
+      - sh
+      - -c
+
+    command:
+      - mkdir -p /var/lib/hue && chown -R 1001:1000 /var/lib/hue
+
     user: root
-    entrypoint: ["sh", "-c"]
-    command: ["mkdir -p /var/lib/hue && chown -R 1001:1000 /var/lib/hue"]
+
     volumes:
       - hue_data:/var/lib/hue
 
