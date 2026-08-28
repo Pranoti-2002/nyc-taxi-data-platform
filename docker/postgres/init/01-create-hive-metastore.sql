@@ -1,20 +1,16 @@
--- ==========================================================
--- Hive Metastore
--- ==========================================================
+\set ON_ERROR_STOP on
 
-CREATE USER hiveuser WITH PASSWORD 'hivepassword';
+\getenv hive_user HIVE_METASTORE_USER
+\getenv hive_password HIVE_METASTORE_PASSWORD
+\getenv hive_db HIVE_METASTORE_DB
+\getenv hue_user HUE_DB_USER
+\getenv hue_password HUE_DB_PASSWORD
+\getenv hue_db HUE_DB_NAME
 
-CREATE DATABASE metastore OWNER hiveuser;
+SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', :'hive_user', :'hive_password') \gexec
+SELECT format('CREATE DATABASE %I OWNER %I', :'hive_db', :'hive_user') \gexec
+SELECT format('GRANT ALL PRIVILEGES ON DATABASE %I TO %I', :'hive_db', :'hive_user') \gexec
 
-GRANT ALL PRIVILEGES ON DATABASE metastore TO hiveuser;
-
-
--- ==========================================================
--- Hue
--- ==========================================================
-
-CREATE USER hueuser WITH PASSWORD 'huepassword';
-
-CREATE DATABASE hue OWNER hueuser;
-
-GRANT ALL PRIVILEGES ON DATABASE hue TO hueuser;
+SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', :'hue_user', :'hue_password') \gexec
+SELECT format('CREATE DATABASE %I OWNER %I', :'hue_db', :'hue_user') \gexec
+SELECT format('GRANT ALL PRIVILEGES ON DATABASE %I TO %I', :'hue_db', :'hue_user') \gexec
