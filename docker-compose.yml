@@ -1,0 +1,455 @@
+x-airflow-build: &airflow-build
+  build:
+    context: .
+    dockerfile: docker/airflow/Dockerfile
+
+x-spark-build: &spark-build
+  build:
+    context: .
+    dockerfile: docker/spark/Dockerfile
+
+
+services:
+
+  # ==========================================================
+  # PostgreSQL - Airflow Metadata Database
+  # ==========================================================
+
+  postgres:
+    image: postgres:15
+    container_name: nyc_taxi_postgres
+
+    env_file:
+      - .env
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER:?POSTGRES_ADMIN_USER must be set}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD must be set}
+      POSTGRES_DB: ${POSTGRES_ADMIN_DB:?POSTGRES_ADMIN_DB must be set}
+      HIVE_METASTORE_DB: ${HIVE_METASTORE_DB:?HIVE_METASTORE_DB must be set}
+      HIVE_METASTORE_USER: ${HIVE_METASTORE_USER:?HIVE_METASTORE_USER must be set}
+      HIVE_METASTORE_PASSWORD: ${HIVE_METASTORE_PASSWORD:?HIVE_METASTORE_PASSWORD must be set}
+      HUE_DB_NAME: ${HUE_DB_NAME:?HUE_DB_NAME must be set}
+      HUE_DB_USER: ${HUE_DB_USER:?HUE_DB_USER must be set}
+      HUE_DB_PASSWORD: ${HUE_DB_PASSWORD:?HUE_DB_PASSWORD must be set}
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  # ==========================================================
+  # Airflow Initialization - One-time setup
+  # ==========================================================
+
+  airflow-init:
+    <<: *airflow-build
+
+    container_name: nyc_taxi_airflow_init
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+    
+    env_file:
+      - .env
+
+    environment:
+      AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_ADMIN_USER:?POSTGRES_ADMIN_USER must be set}:${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD must be set}@postgres:${POSTGRES_PORT:?POSTGRES_PORT must be set}/${POSTGRES_ADMIN_DB:?POSTGRES_ADMIN_DB must be set}
+      AIRFLOW_HOME: /opt/airflow
+      PYTHONPATH: /opt/project
+
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+      - ./generic_scripts:/opt/project/generic_scripts
+      - ./src:/opt/project/src
+      - ./data:/opt/project/data
+
+    command:
+      - bash
+      - -c
+      - |
+        set -e
+        airflow db migrate
+        airflow users create \
+          --username "$${AIRFLOW_ADMIN_USERNAME}" \
+          --firstname "$${AIRFLOW_ADMIN_FIRSTNAME}" \
+          --lastname "$${AIRFLOW_ADMIN_LASTNAME}" \
+          --role Admin \
+          --email "$${AIRFLOW_ADMIN_EMAIL}" \
+          --password "$${AIRFLOW_ADMIN_PASSWORD}" || true
+
+
+  # ==========================================================
+  # Airflow API Server
+  # ==========================================================
+
+  airflow-apiserver:
+    <<: *airflow-build
+
+    container_name: nyc_taxi_airflow_apiserver
+
+    command:
+      - api-server
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+
+    env_file:
+      - .env
+
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_ADMIN_USER:?POSTGRES_ADMIN_USER must be set}:${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD must be set}@postgres:${POSTGRES_PORT:?POSTGRES_PORT must be set}/${POSTGRES_ADMIN_DB:?POSTGRES_ADMIN_DB must be set}
+      AIRFLOW_HOME: /opt/airflow
+      PYTHONPATH: /opt/project
+
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+      - ./generic_scripts:/opt/project/generic_scripts
+      - ./src:/opt/project/src
+      - ./data:/opt/project/data
+
+    ports:
+      - "8080:8080"
+
+
+  # ==========================================================
+  # Airflow Scheduler
+  # ==========================================================
+
+  airflow-scheduler:
+    <<: *airflow-build
+
+    container_name: nyc_taxi_airflow_scheduler
+
+    command:
+      - scheduler
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+
+    env_file:
+      - .env
+
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_ADMIN_USER:?POSTGRES_ADMIN_USER must be set}:${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD must be set}@postgres:${POSTGRES_PORT:?POSTGRES_PORT must be set}/${POSTGRES_ADMIN_DB:?POSTGRES_ADMIN_DB must be set}
+      AIRFLOW_HOME: /opt/airflow
+      PYTHONPATH: /opt/project
+
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+      - ./generic_scripts:/opt/project/generic_scripts
+      - ./src:/opt/project/src
+      - ./data:/opt/project/data
+
+
+  # ==========================================================
+  # Airflow DAG Processor
+  # ==========================================================
+
+  airflow-dag-processor:
+    <<: *airflow-build
+
+    container_name: nyc_taxi_airflow_dag_processor
+
+    command:
+      - dag-processor
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+
+    env_file:
+      - .env
+
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_ADMIN_USER:?POSTGRES_ADMIN_USER must be set}:${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD must be set}@postgres:${POSTGRES_PORT:?POSTGRES_PORT must be set}/${POSTGRES_ADMIN_DB:?POSTGRES_ADMIN_DB must be set}
+      AIRFLOW_HOME: /opt/airflow
+      PYTHONPATH: /opt/project
+
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+      - ./generic_scripts:/opt/project/generic_scripts
+      - ./src:/opt/project/src
+      - ./data:/opt/project/data
+
+
+  # ==========================================================
+  # Airflow Triggerer
+  # ==========================================================
+
+  airflow-triggerer:
+    <<: *airflow-build
+
+    container_name: nyc_taxi_airflow_triggerer
+
+    command:
+      - triggerer
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+
+    env_file:
+      - .env
+
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_ADMIN_USER:?POSTGRES_ADMIN_USER must be set}:${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD must be set}@postgres:${POSTGRES_PORT:?POSTGRES_PORT must be set}/${POSTGRES_ADMIN_DB:?POSTGRES_ADMIN_DB must be set}
+      AIRFLOW_HOME: /opt/airflow
+      PYTHONPATH: /opt/project
+
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+      - ./generic_scripts:/opt/project/generic_scripts
+      - ./src:/opt/project/src
+      - ./data:/opt/project/data
+
+
+  # ==========================================================
+  # Spark Master
+  # ==========================================================
+
+  spark-master:
+    <<: *spark-build
+
+    container_name: nyc_taxi_spark_master
+    hostname: spark-master
+
+    env_file:
+      - .env
+
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.master.Master
+
+    ports:
+      - "7077:7077"
+      - "8081:8080"
+
+    volumes:
+      - ./src:/opt/project/src
+      - ./data:/opt/project/data
+
+
+  # ==========================================================
+  # Spark Worker
+  # ==========================================================
+
+  spark-worker:
+    <<: *spark-build
+
+    container_name: nyc_taxi_spark_worker
+    hostname: spark-worker
+
+    depends_on:
+      - spark-master
+    
+    env_file:
+      - .env
+
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.worker.Worker
+      - spark://spark-master:7077
+
+    environment:
+      SPARK_WORKER_CORES: 2
+      SPARK_WORKER_MEMORY: 2G
+
+    volumes:
+      - ./src:/opt/project/src
+      - ./data:/opt/project/data
+
+
+  # ==========================================================
+  # pgAdmin
+  # ==========================================================
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: nyc_taxi_pgadminW
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:?PGADMIN_DEFAULT_EMAIL must be set}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?PGADMIN_DEFAULT_PASSWORD must be set}
+
+    ports:
+      - "5050:80"
+
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+  # ==========================================================
+  # Hive Metastore
+  # ==========================================================
+
+  hive:
+    build:
+      context: .
+      dockerfile: docker/hive/Dockerfile
+    container_name: hive_database
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    env_file:
+      - .env
+
+    environment:
+      SERVICE_NAME: metastore
+      DB_DRIVER: postgres
+      HADOOP_CLASSPATH: /opt/hive/lib/*
+      HIVE_AUX_JARS_PATH: /opt/hive/lib/postgresql.jar
+      SERVICE_OPTS: >-
+        -Djavax.jdo.option.ConnectionDriverName=org.postgresql.Driver
+        -Djavax.jdo.option.ConnectionURL=jdbc:postgresql://postgres:5432/${HIVE_METASTORE_DB:?HIVE_METASTORE_DB must be set}
+        -Djavax.jdo.option.ConnectionUserName=${HIVE_METASTORE_USER:?HIVE_METASTORE_USER must be set}
+        -Djavax.jdo.option.ConnectionPassword=${HIVE_METASTORE_PASSWORD:?HIVE_METASTORE_PASSWORD must be set}
+
+    ports:
+      - "9083:9083"
+
+    volumes:
+      - hive_data:/opt/hive/data
+
+  # ==========================================================
+  # HiveServer2 - SQL endpoint for Hue
+  # ==========================================================
+
+  hiveserver2:
+    build:
+      context: .
+      dockerfile: docker/hive/Dockerfile
+    container_name: hiveserver2
+
+    depends_on:
+      hive:
+        condition: service_started
+
+    env_file:
+      - .env
+
+    environment:
+      HADOOP_CLASSPATH: "/opt/hive/lib/*"
+      SERVICE_NAME: hiveserver2
+      SERVICE_OPTS: >-
+        -Dhive.metastore.uris=thrift://hive:9083
+        -Dhive.server2.webui.port=0
+      IS_RESUME: "true"
+
+    ports:
+      - "10000:10000"
+
+    volumes:
+      - hive_data:/opt/hive/data
+
+  # ==========================================================
+  # Hue - SQL editor and data warehouse UI
+  # ==========================================================
+
+  hue:
+    image: gethue/hue:4.11.0
+    container_name: hue
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      hiveserver2:
+        condition: service_started
+      hue-init:
+        condition: service_completed_successfully
+
+    ports:
+      - "8888:8888"
+
+    command:
+      - sh
+      - -c
+      - >-
+        python3 -c "import os; from pathlib import Path; p=Path('/tmp/hue.ini.template'); text=p.read_text(); text=text.replace('$' + '{HUE_SECRET_KEY}', os.environ['HUE_SECRET_KEY']).replace('$' + '{HUE_DB_USER}', os.environ['HUE_DB_USER']).replace('$' + '{HUE_DB_PASSWORD}', os.environ['HUE_DB_PASSWORD']).replace('$' + '{HUE_DB_NAME}', os.environ['HUE_DB_NAME']); Path('/usr/share/hue/desktop/conf/z-hue.ini').write_text(text)"
+        && exec ./startup.sh
+
+    environment:
+      HUE_DB_NAME: ${HUE_DB_NAME:?HUE_DB_NAME must be set}
+      HUE_DB_USER: ${HUE_DB_USER:?HUE_DB_USER must be set}
+      HUE_DB_PASSWORD: ${HUE_DB_PASSWORD:?HUE_DB_PASSWORD must be set}
+      HUE_SECRET_KEY: ${HUE_SECRET_KEY:?HUE_SECRET_KEY must be set}
+
+    volumes:
+      - ./config/hue.ini:/tmp/hue.ini.template:ro
+      - hue_data:/var/lib/hue
+
+
+  # ==========================================================
+  # Hue initialization
+  # ==========================================================
+  hue-init:
+    image: gethue/hue:4.11.0
+
+    container_name: hue_init
+
+    entrypoint:
+      - sh
+      - -c
+
+    command:
+      - mkdir -p /var/lib/hue && chown -R 1001:1000 /var/lib/hue
+
+    user: root
+
+    volumes:
+      - hue_data:/var/lib/hue
+
+
+# ============================================================
+# Volumes
+# ============================================================
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+  hive_data:
+  hue_data:

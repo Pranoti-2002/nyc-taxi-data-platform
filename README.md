@@ -29,6 +29,22 @@ Gold
 - DuckDB
 - Gemini API (AI component)
 
+## Local Setup
+
+Create the local environment file before starting Compose:
+
+```bash
+cp .env.example .env
+```
+
+Replace every `change_me` value and add the AWS credentials required for S3 access. Keep `.env` local and never commit it.
+
+Start the platform with:
+
+```bash
+docker compose up --build
+```
+
 ## Data Layers
 
 ### Bronze

@@ -1,0 +1,6 @@
+apache-airflow-providers-apache-spark
+apache-airflow-providers-fab
+
+boto3
+requests
+pandas
