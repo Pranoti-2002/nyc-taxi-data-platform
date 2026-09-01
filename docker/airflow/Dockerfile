@@ -12,6 +12,13 @@ RUN apt-get update \
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
+# Create a writable temporary directory for the airflow user
+RUN mkdir -p /opt/airflow/tmp \
+    && chown airflow:root /opt/airflow/tmp \
+    && chmod 700 /opt/airflow/tmp
+
+ENV TMPDIR=/opt/airflow/tmp
+
 COPY docker/airflow/requirements.txt /tmp/requirements.txt
 COPY docker/airflow/constraints-3.11.txt /tmp/constraints.txt
 
