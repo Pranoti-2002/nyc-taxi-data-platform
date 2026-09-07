@@ -116,6 +116,7 @@ services:
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+      AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_API_AUTH_JWT_SECRET:?AIRFLOW_API_AUTH_JWT_SECRET must be set}
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_ADMIN_USER:?POSTGRES_ADMIN_USER must be set}:${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD must be set}@postgres:${POSTGRES_PORT:?POSTGRES_PORT must be set}/${POSTGRES_ADMIN_DB:?POSTGRES_ADMIN_DB must be set}
       AIRFLOW_HOME: /opt/airflow
       PYTHONPATH: /opt/project
@@ -156,6 +157,8 @@ services:
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-apiserver:8080/execution/
+      AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_API_AUTH_JWT_SECRET:?AIRFLOW_API_AUTH_JWT_SECRET must be set}
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_ADMIN_USER:?POSTGRES_ADMIN_USER must be set}:${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD must be set}@postgres:${POSTGRES_PORT:?POSTGRES_PORT must be set}/${POSTGRES_ADMIN_DB:?POSTGRES_ADMIN_DB must be set}
       AIRFLOW_HOME: /opt/airflow
       PYTHONPATH: /opt/project

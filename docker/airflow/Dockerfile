@@ -1,4 +1,4 @@
-FROM apache/airflow:3.0.0-python3.11
+FROM apache/airflow:3.3.1-python3.11
 
 USER root
 
@@ -27,7 +27,7 @@ USER airflow
 RUN pip install --no-cache-dir \
     --default-timeout=300 \
     --retries=10 \
-    --constraint /tmp/constraints.txt \
+    --constraint https://raw.githubusercontent.com/apache/airflow/constraints-3.3.1/constraints-3.11.txt \
     -r /tmp/requirements.txt
 
 USER root
