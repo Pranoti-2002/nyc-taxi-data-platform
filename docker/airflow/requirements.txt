@@ -4,3 +4,5 @@ apache-airflow-providers-fab
 boto3
 requests
 pandas
+pyhive
+thrift_sasl
