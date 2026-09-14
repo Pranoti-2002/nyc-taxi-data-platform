@@ -76,6 +76,7 @@ services:
       - ./generic_scripts:/opt/project/generic_scripts
       - ./src:/opt/project/src
       - ./data:/opt/project/data
+      - ./parfiles:/opt/project/parfiles
 
     command:
       - bash
@@ -128,6 +129,7 @@ services:
       - ./generic_scripts:/opt/project/generic_scripts
       - ./src:/opt/project/src
       - ./data:/opt/project/data
+      - ./parfiles:/opt/project/parfiles
 
     ports:
       - "8080:8080"
@@ -170,6 +172,7 @@ services:
       - ./generic_scripts:/opt/project/generic_scripts
       - ./src:/opt/project/src
       - ./data:/opt/project/data
+      - ./parfiles:/opt/project/parfiles
 
 
   # ==========================================================
@@ -207,6 +210,7 @@ services:
       - ./generic_scripts:/opt/project/generic_scripts
       - ./src:/opt/project/src
       - ./data:/opt/project/data
+      - ./parfiles:/opt/project/parfiles
 
 
   # ==========================================================

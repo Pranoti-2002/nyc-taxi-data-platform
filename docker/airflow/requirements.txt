@@ -1,6 +1,6 @@
 apache-airflow-providers-apache-spark
 apache-airflow-providers-fab
-
+geopandas
 boto3
 requests
 pandas

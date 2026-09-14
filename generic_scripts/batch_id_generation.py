@@ -1,10 +1,12 @@
 # generic_scripts/batch_id_generation.py
 import datetime
 import logging
+import os
 import sys
 from typing import Optional
 
 from generic_scripts.utils.hive_connection import get_hive_connection
+from generic_scripts.utils.s3_utils import write_s3_path
 
 # Initialize logging
 logging.basicConfig(
@@ -107,12 +109,26 @@ def generate_etl_batch_id(cursor, source_system: str, phase_name: str) -> str:
 
         logger.info(f"Generated etl_batch_id: {etl_batch_id}")
         
+        # Write to s3 path
+        bucket =  "dataforge-lake"
+        key = f"parfiles/{source_system}/etl_batch_id.txt"
+        
         # Write to local file
         file_path = f"/opt/project/parfiles/{source_system}/etl_batch_id.txt"
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(etl_batch_id)
+        try:
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(etl_batch_id)
+            logger.info(f"etl_batch_id written to {file_path}")
+            
+            # Write to S3
+            write_s3_path(bucket, key, file_path)
+            logger.info(f"etl_batch_id written to s3 path with bucket {bucket} and key {key}")
         
-        logger.info(f"etl_batch_id written to {file_path}")
+        except Exception as e:
+            logger.error(f"failed to push etl_batch_id into local/s3: {e}", exc_info=True)     
+        
+        
         
         return etl_batch_id
 
