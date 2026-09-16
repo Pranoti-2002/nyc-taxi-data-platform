@@ -1,4 +1,10 @@
-# generic_scripts/batch_id_generation.py
+"""------------------- Batch ID Generator -------------------
+Creates and records a new etl_batch_id for a source system and phase, writes it to the local parfiles directory, and uploads the same value to S3 for downstream pipeline tracking.
+Usage: python batch_id_generation.py <source_system> <phase_name>
+example: python batch_id_generation.py cv1 landing
+The script checks for incomplete batch ids in DATAFORGE_AUDIT.BATCH_LOG before creating a new one and stores the latest value in /opt/project/parfiles/<source_system>/etl_batch_id.txt.
+------------------- ------------------- ----------------------"""
+
 import datetime
 import logging
 import sys
@@ -113,7 +119,7 @@ def generate_etl_batch_id(cursor, source_system: str, phase_name: str) -> str:
         key = f"parfiles/{source_system}/etl_batch_id.txt"
         
         # Write to local file
-        file_path = f"/opt/project/parfiles/{source_system}/etl_batch_id.txt"
+        file_path = f"/opt/project/parfiles/{source_system}/{source_system}_batch_id.txt"
         try:
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(etl_batch_id)

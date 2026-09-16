@@ -10,4 +10,4 @@ CREATE EXTERNAL TABLE dataforge_audit.batch_log (
     updated_at TIMESTAMP
 )
 STORED AS PARQUET
-LOCATION 's3a://dataforge-lake/audit/batch_log/';
+LOCATION 's3a://dataforge-lake/audit/batch_log';

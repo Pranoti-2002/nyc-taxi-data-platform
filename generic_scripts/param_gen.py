@@ -1,3 +1,11 @@
+"""------------------- Parameter Generator ------------------- 
+Reads and validates the local CSV parameter file for a source system, generates one JSON parameter file per active workflow, uploads the files to S3, and removes the temporary local JSON files. 
+Usage: python param_gen.py <source_system> Input 
+example: parfiles/cv1/cv1_prm.csv 
+etl_batch_id_path,wf_name,source_schema,target_schema,source_table,target_table,phase_name,conn,active 
+s3://dataforge-lake/batch/cv1.txt,artists_load,src,tgt,artists,artists,landing,cv1_conn,Y s3://dataforge-lake/batch/cv1.txt,releases_load,src,tgt,releases,releases,landing,cv1_conn,Y 
+------------------- ------------------- ----------------------"""
+
 import csv
 import sys
 import logging
@@ -6,7 +14,7 @@ import json
 from urllib.parse import urlparse
 import boto3
 s3 = boto3.client('s3')
-from generic_scripts.utils.s3_utils import parse_s3_path, read_s3_path_data, write_s3_path, file_exists, delete_s3_path_data
+from generic_scripts.utils.s3_utils import parse_s3_path, read_s3_path_data, write_s3_path, file_exists, delete_s3_path_data, read_etl_batch_id
 
 
 # Initialize logging
@@ -103,20 +111,6 @@ def write_prm_file(source_system, params):
             logger.error(f"Error processing workflow '{wf_name}': {err}")
             raise                     
 
-def read_etl_batch_id(etl_batch_id_path, source_system):
-    try:
-        # Read etl_batch_id from s3 using boto3
-        bucket_name, file_key = parse_s3_path(etl_batch_id_path)
-        logger.info("Successfully parsed s3 path for etl_batch_id")
-        etl_batch_id = read_s3_path_data(bucket_name, file_key)
-        logger.info(f"Sucesfully read etl_batch_id from bucket {bucket_name} and key {file_key}")
-    except Exception as E:
-        logger.warning(f"failed to get etl_batch_id from s3, reverting back to efs path: {E}")
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    etl_batch_id_path = os.path.join(project_root, f"parfiles/", f"{source_system}_batch_id.txt")
-    with open(etl_batch_id_path, "r", encoding= 'utf-8') as f:
-        etl_batch_id = f.readline().strip()
-    return etl_batch_id
 
 def validate_row(row):
     required_fields = [

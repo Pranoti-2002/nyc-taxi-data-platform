@@ -66,6 +66,7 @@ derby.log
 .pytest_cache/
 .mypy_cache/
 backups
+/tests
 
 # =========================
 # OS

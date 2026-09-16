@@ -1,3 +1,10 @@
+"""------------------- Hive Connection Helper -------------------
+Creates a shared PyHive connection to the Hive metastore for audit, landing, and transformation jobs using environment variables for host, port, user, and database.
+Usage: from generic_scripts.utils.hive_connection import get_hive_connection
+example: conn = get_hive_connection()
+The helper defaults to hiveserver2:10000 and the default database if the environment is not configured.
+------------------- ------------------- ----------------------"""
+
 import os
 
 from pyhive import hive
