@@ -1,4 +1,4 @@
-CREATE EXTERNAL TABLE audit.batch_log (
+CREATE EXTERNAL TABLE IF NOT EXISTS audit.batch_log (
     etl_batch_id STRING,
     phase_name STRING,
     source_system STRING,

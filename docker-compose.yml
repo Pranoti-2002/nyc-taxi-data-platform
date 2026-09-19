@@ -77,6 +77,7 @@ services:
       - ./src:/opt/project/src
       - ./data:/opt/project/data
       - ./parfiles:/opt/project/parfiles
+      - ./sql:/opt/project/sql
 
     command:
       - bash
@@ -130,6 +131,7 @@ services:
       - ./src:/opt/project/src
       - ./data:/opt/project/data
       - ./parfiles:/opt/project/parfiles
+      - ./sql:/opt/project/sql
 
     ports:
       - "8080:8080"
@@ -173,6 +175,7 @@ services:
       - ./src:/opt/project/src
       - ./data:/opt/project/data
       - ./parfiles:/opt/project/parfiles
+      - ./sql:/opt/project/sql
 
 
   # ==========================================================
@@ -211,6 +214,7 @@ services:
       - ./src:/opt/project/src
       - ./data:/opt/project/data
       - ./parfiles:/opt/project/parfiles
+      - ./sql:/opt/project/sql
 
 
   # ==========================================================
@@ -248,6 +252,7 @@ services:
       - ./generic_scripts:/opt/project/generic_scripts
       - ./src:/opt/project/src
       - ./data:/opt/project/data
+      - ./sql:/opt/project/sql
 
 
   # ==========================================================

@@ -1,0 +1,3 @@
+wf_name,source_schema,target_schema,source_table,target_table,etl_batch_id_path,phase_name,conn,active
+3st_workflow,sales,curated,customer,dim_customer,s3://dataforge-lake/parfiles/nyc_taxi/etl_batch_id.txt,sanitised,oracle_prod,Y
+2nd_workflow,sales,curated,orders,fact_orders,s3://dataforge-lake/parfiles/nyc_taxi/etl_batch_id.txt,sanitised,oracle_prod,Y

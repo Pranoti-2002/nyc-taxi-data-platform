@@ -1,3 +1,10 @@
+"""------------------- Taxi Zone Lookup Fetcher -------------------
+Downloads the NYC taxi zone lookup CSV and shapefile archive, converts the zones to GeoParquet, and uploads the lookup data to S3.
+Usage: python lookup_fetcher.py
+Example: python lookup_fetcher.py
+This script stores downloaded lookup files under data/bronze/lookup and uploads the CSV and GeoParquet outputs to the configured lookup keys.
+------------------- ------------------- ----------------------"""
+
 import logging
 import shutil
 import zipfile
@@ -63,10 +70,7 @@ def download_file(
     Download a file from a URL.
     """
 
-    output_path.parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
+    output_path.parent.mkdir(parents=True,exist_ok=True,)
 
     logger.info(
         "Downloading %s",

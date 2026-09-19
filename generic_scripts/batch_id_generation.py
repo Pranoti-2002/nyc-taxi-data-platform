@@ -1,4 +1,10 @@
-# generic_scripts/batch_id_generation.py
+"""------------------- ETL Batch ID Generator -------------------
+Checks for incomplete batches, creates a new ETL batch ID, records it in the Hive audit table, and writes it to the source system parameter directory.
+Usage: python batch_id_generation.py <source_system> <phase_name>
+Example: python batch_id_generation.py nyc_taxi ingestion
+This script prevents a new batch from starting when an earlier batch for the same source and phase is still incomplete.
+------------------- ------------------- ----------------------"""
+
 import datetime
 import logging
 import os

@@ -15,7 +15,7 @@ with DAG(
         task_id="batch_id_generation",
         bash_command=(
             "cd /opt/project && "
-            "python -m generic_scripts.batch_id_generation"
+            "python -m generic_scripts.batch_id_generation "
             "nyc_taxi landing"
         ),
     )
@@ -27,6 +27,13 @@ with DAG(
             "nyc_weather landing"
         ),
     )
+    prm_generation = BashOperator(
+    task_id="prm_generation",   
+    bash_command=(
+        "cd /opt/project && "
+        "python -m generic_scripts.param_gen nyc_taxi"
+        ),
+    )
     fetch_source_files = BashOperator(
         task_id="fetch_source_files",
         bash_command=(
@@ -35,7 +42,6 @@ with DAG(
             "--taxi-type yellow "
             "--start-date 2024-01 "
             "--end-date 2024-01 "
-            "--bucket-name dataforge-lake "
             "nyc_taxi landing && "
             "python generic_scripts/lookup_fetcher.py"
         ),
@@ -53,4 +59,4 @@ with DAG(
     )
     
     
-batch_id_generation >> fetch_source_files >> weather_batch_id_generation >> weather_ingestion
+batch_id_generation >> prm_generation >> fetch_source_files >> weather_batch_id_generation >> weather_ingestion

@@ -1,3 +1,10 @@
+"""------------------- NYC Weather Fetcher -------------------
+Fetches historical hourly NYC weather data from Open-Meteo, validates the response, saves monthly JSON files, and uploads them to the raw S3 partition for the current ETL batch.
+Usage: python weather_fetcher.py --start-date YYYY-MM-DD --end-date YYYY-MM-DD --bucket-name BUCKET <source_system>
+Example: python weather_fetcher.py --start-date 2024-01-01 --end-date 2024-02-29 --bucket-name dataforge-lake nyc_weather
+This script processes the requested date range month by month and stores local output under data/bronze/weather.
+------------------- ------------------- ----------------------"""
+
 import argparse
 import json
 import logging

@@ -1,3 +1,10 @@
+"""------------------- TLC Trip Data Fetcher -------------------
+Downloads monthly NYC Taxi and Limousine Commission trip data, validates each Parquet file, and uploads it to the raw S3 partition for the current ETL batch.
+Usage: python tlc_fetcher.py --taxi-type TYPE --start-date YYYY-MM --end-date YYYY-MM <source_system> <phase_name>
+Example: python tlc_fetcher.py --taxi-type yellow --start-date 2024-01 --end-date 2024-02 nyc_taxi ingestion
+This script skips an upload when the corresponding batch-partitioned object already exists in S3.
+------------------- ------------------- ----------------------"""
+
 import argparse
 from datetime import datetime
 import requests
@@ -6,7 +13,7 @@ import pyarrow.parquet as pq
 import boto3
 from botocore.exceptions import ClientError
 import logging
-import sys
+from generic_scripts.utils.s3_utils import get_bucket_name
 
 
 logger = logging.getLogger(__name__)
@@ -25,9 +32,10 @@ def parse_arguments():
 
     parser.add_argument(
         "--taxi-type",
+        nargs="+",
         required=True,
         choices=["yellow", "green", "fhv", "hvfhv"],
-        help="Type of taxi data to download (yellow, green, fhv, hvfhv)"
+        help="One or more taxi types to fetch (yellow, green, fhv, hvfhv)",
     ) 
     parser.add_argument(
         "--start-date",
@@ -38,11 +46,6 @@ def parse_arguments():
         "--end-date",
         required=True,
         help="End date in YYYY-MM format"
-    )
-    parser.add_argument(
-        "--bucket-name",
-        required=True,
-        help="Name of the S3 bucket to upload data to"
     )
     parser.add_argument(
         "source_system",
@@ -176,26 +179,15 @@ def main():
         format="%(asctime)s %(levelname)s %(name)s - %(message)s",
     )
     args = parse_arguments()
-    taxi_type = args.taxi_type
+    taxi_types = args.taxi_type
     start_date = args.start_date
     end_date = args.end_date
-    bucket_name = args.bucket_name
+    bucket_name = get_bucket_name()
     source_system = args.source_system
-
-    logger.info(
-        "Starting TLC fetch: taxi_type=%s, start_date=%s, end_date=%s, bucket=%s, source_system=%s, phase=%s",
-        taxi_type,
-        start_date,
-        end_date,
-        bucket_name,
-        source_system,
-        args.phase_name,
-    )
-
 
     etl_batch_id_file = Path(
     f"parfiles/{source_system}/etl_batch_id.txt"
-)
+    )
 
     if not etl_batch_id_file.exists():
         raise FileNotFoundError(
@@ -216,25 +208,27 @@ def main():
     months = generate_months(start_date, end_date)
     logger.info("Processing %d month(s): %s", len(months), ", ".join(months))
 
-    for year_month in months:
-        url = build_tlc_url(taxi_type, year_month)
-        file_name = url.split("/")[-1] 
-        local_path = Path(f"data/bronze/{file_name}")
-        s3_key = build_s3_key(taxi_type, year_month, file_name, etl_batch_id)
-        logger.info(
-            "Processing %s data for %s: local_path=%s, s3_key=%s",
-            taxi_type,
-            year_month,
-            local_path,
-            s3_key,
-        )
-        if s3_object_exists(s3_client, bucket_name, s3_key):
-            logger.info("Skipping upload; S3 object already exists: s3://%s/%s", bucket_name, s3_key)
-        else:
-            upload_to_s3(s3_client, local_path, bucket_name, s3_key)
-        download_file(url, local_path)
-        validate_download(local_path)
-        validate_parquet(local_path)
+    for taxi_type in taxi_types:
+        for year_month in months:
+                url = build_tlc_url(taxi_type, year_month)
+                file_name = url.split("/")[-1] 
+                local_path = Path(f"data/bronze/{file_name}")
+                s3_key = build_s3_key(taxi_type, year_month, file_name, etl_batch_id)
+                logger.info(
+                    "Processing %s data for %s: local_path=%s, s3_key=%s",
+                    taxi_type,
+                    year_month,
+                    local_path,
+                    s3_key,
+                )
+                download_file(url, local_path)
+                validate_download(local_path)
+                validate_parquet(local_path)
+                if s3_object_exists(s3_client, bucket_name, s3_key):
+                    logger.info("Skipping upload; S3 object already exists: s3://%s/%s", bucket_name, s3_key)
+                else:
+                    upload_to_s3(s3_client, local_path, bucket_name, s3_key)
+        
 
     logger.info("TLC fetch completed successfully for %d month(s)", len(months))
 if __name__ == "__main__":
