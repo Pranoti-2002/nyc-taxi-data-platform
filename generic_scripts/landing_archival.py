@@ -51,14 +51,51 @@ def get_table_s3(cursor, schema_name, table_name, source_system):
         raise ValueError(f"Unsupported table location: {table_location}")
     logger.info("Table %s.%s is stored at %s", schema_name, table_name, table_location)
 
+    table_path = Path(table_location.replace("s3://", "", 1))
+    table_parts = table_path.parts
+    if table_parts and table_parts[-1] == table_name:
+        table_path = Path(*table_parts[:-1])
+
+    cleaned_table_location = f"s3://{table_path.as_posix()}" if table_path.parts else "s3://"
+
     # Read etl_batch_id for the source_system
     bucket_name = str(os.getenv("S3_BUCKET_NAME"))
-    etl_batch_id_path = "s3://" + bucket_name + "/parfiles/" + f"{source_system}/etl_batch_id.txt"
+    etl_batch_id_path = "s3://" + bucket_name + "/parfiles/" + f"{source_system}/" + f"{source_system}_batch_id.txt"
     etl_batch_id = read_etl_batch_id(etl_batch_id_path=etl_batch_id_path, source_system=source_system)
-    return table_location + "/" + etl_batch_id
+    return cleaned_table_location + "/" + etl_batch_id
+
+def clear_local_landing_files(keep_latest: int = 3, base_dir: str = "/opt/project/data/bronze"):
+    """Delete older local landing files when there are more than keep_latest files."""
+    local_dir = Path(base_dir)
+    if not local_dir.exists():
+        logger.info("Local landing directory does not exist: %s", local_dir)
+        return
+
+    files = [
+        file_path for file_path in local_dir.iterdir()
+        if file_path.is_file()
+    ]
+    if len(files) <= keep_latest:
+        logger.info(
+            "Local landing files count (%d) is within retention limit (%d); no cleanup needed.",
+            len(files),
+            keep_latest,
+        )
+        return
+
+    files_sorted = sorted(files, key=lambda p: p.stat().st_mtime, reverse=True)
+    files_to_delete = files_sorted[keep_latest:]
+
+    for file_path in files_to_delete:
+        try:
+            file_path.unlink()
+            logger.info("Deleted old local landing file: %s", file_path)
+        except Exception as exc:
+            logger.warning("Failed to delete local landing file %s: %s", file_path, exc)
+
 
 def clear_raw_files(cursor, schema_name, table_name, source_system):
-    """Remove older raw files and keep the latest 5 matching files."""
+    """Remove older raw files on S3 and keep only the newest local landing files."""
     raw_dir = get_table_s3(cursor, schema_name, table_name, source_system)
     logger.info(raw_dir)
     bucket, key = parse_s3_path(raw_dir)
@@ -69,7 +106,9 @@ def clear_raw_files(cursor, schema_name, table_name, source_system):
         delete_s3_path_data(bucket, key)
         logger.info("Successfully cleared s3 path")
     except Exception as E:
-        logger.warning(f"Failed to clear data from the s3 path: {E}")    
+        logger.warning(f"Failed to clear data from the s3 path: {E}")
+
+    clear_local_landing_files(keep_latest=3)
 
 
 def main():

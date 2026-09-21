@@ -7,10 +7,16 @@ The helper defaults to hiveserver2:10000 and the default database if the environ
 
 import os
 
-from pyhive import hive
+try:
+    from pyhive import hive
+except ImportError:  # pragma: no cover - optional dependency for local/test environments
+    hive = None
 
 
 def get_hive_connection():
+    if hive is None:
+        raise ModuleNotFoundError("pyhive is required for Hive connectivity")
+
     return hive.Connection(
         host=os.getenv("HIVE_SERVER_HOST", "hiveserver2"),
         port=int(os.getenv("HIVE_SERVER_PORT", "10000")),

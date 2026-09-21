@@ -385,7 +385,7 @@ services:
       SERVICE_OPTS: >-
         -Dhive.metastore.uris=thrift://hive:9083
         -Dhive.server2.webui.port=0
-      IS_RESUME: "true"
+      IS_RESUME: "false"
 
     ports:
       - "10000:10000"

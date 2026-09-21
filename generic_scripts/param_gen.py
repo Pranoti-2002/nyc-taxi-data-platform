@@ -11,10 +11,10 @@ import sys
 import logging
 import os
 import json
-from urllib.parse import urlparse
+from pathlib import Path
 import boto3
 s3 = boto3.client('s3')
-from generic_scripts.utils.s3_utils import parse_s3_path, read_s3_path_data, write_s3_path, file_exists, delete_s3_path_data, read_etl_batch_id
+from generic_scripts.utils.s3_utils import parse_s3_path, read_s3_path_data, write_s3_path, s3_object_exists, delete_s3_path_data, read_etl_batch_id
 
 
 # Initialize logging
@@ -25,7 +25,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def read_prm_file(source_system):
+def read_prm_data_file(source_system):
     """
     Read parameter file from CSV and return list of validated rows.
     
@@ -35,8 +35,8 @@ def read_prm_file(source_system):
     Returns:
         List of validated parameter rows (active only)
     """
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    prm_file_path = os.path.join(project_root, f"parfiles/{source_system}", f"{source_system}_prm.csv")
+    project_root = Path(__file__).resolve().parent.parent
+    prm_file_path = project_root / "parfiles" / source_system / f"{source_system}_prm.csv"
     
     logger.info(f"Reading parameter file from: {prm_file_path}")
     params = []
@@ -62,7 +62,7 @@ def write_prm_file(source_system, params):
         source_system: Source system name (e.g., 'cv1')
         params: List of parameter rows to process
     """
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    project_root = Path(__file__).resolve().parent.parent
     processed_workflows = set()
    
     for row in params:
@@ -85,8 +85,8 @@ def write_prm_file(source_system, params):
                 "active": row["active"]
             }
             
-            param_file_path = os.path.join(project_root, f"parfiles/{source_system}", f'{wf_name}_prm.json')
-            
+            param_file_path = project_root / "parfiles" / source_system / f"{wf_name}_prm.json"
+
             # Write data to local file
             with open(param_file_path, "w", encoding='utf-8') as param_file:
                 json.dump(data, param_file, indent=4)
@@ -97,8 +97,7 @@ def write_prm_file(source_system, params):
             logger.info(f"Parameter file successfully written to S3 bucket '{bucket}' at key '{key}'")
             
             # Clean up local file
-            os.remove(param_file_path)
-            logger.info(f"Local parameter file removed: {param_file_path}")                
+            param_file_path.unlink()
                 
             
             logger.info(f"Successfully wrote parameter file: {param_file_path}")
@@ -155,7 +154,7 @@ def main():
     
     try:
         # Read parameter file
-        params = read_prm_file(source_system)
+        params = read_prm_data_file(source_system)
         
         if not params:
             logger.warning(f"No active parameters found for source system '{source_system}'")
