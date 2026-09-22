@@ -36,17 +36,14 @@ with DAG(
         task_id="batch_id_generation_extraction",
         bash_command="python /opt/project/generic_scripts/batch_id_generation_extraction.py geo_sup_bs_6 landing",
     )
-    parameter_generation = BashOperator(
-        task_id="parameter_generation",
-        bash_command="python /opt/project/generic_scripts/param_gen.py geo_sup_bs_6",
-    )
     tlc_taxi_data_downloader_extraction_to_s3 = BashOperator(
         task_id="tlc_yellow_taxi_data_downloader_extraction_to_s3",
         bash_command=(
             "python /opt/project/generic_scripts/tlc_fetcher.py "
             "--taxi-type yellow green fhv hvfhv "
             "--start-date 2024-01 "
-            "--end-date 2024-01"
+            "--end-date 2024-01 "
+            "geo_sup_bs_6 landing"
         ),
     )
     tlc_taxi_data_lookup_downloader_extraction_to_s3 = BashOperator(
@@ -61,13 +58,13 @@ with DAG(
             "python /opt/project/generic_scripts/landing_archival.py geo_sup_bs_6 dataforge_landing yellow_taxi && "
             "python /opt/project/generic_scripts/landing_archival.py geo_sup_bs_6 dataforge_landing green_taxi && "
             "python /opt/project/generic_scripts/landing_archival.py geo_sup_bs_6 dataforge_landing fhv_trips && "
-            "python /opt/project/generic_scripts/landing_archival.py geo_sup_bs_6 dataforge_landing fhvhv_trips"
+            "python /opt/project/generic_scripts/landing_archival.py geo_sup_bs_6 dataforge_landing hvfhv_trips"
         ),
     )
     empty_operator_2 = EmptyOperator(task_id = 'end')
     
     
     # Dependencies
-    empty_operator_1 >> batch_id_generation_extraction >> parameter_generation >> tlc_taxi_data_downloader_extraction_to_s3 >> tlc_taxi_data_lookup_downloader_extraction_to_s3 >> landing_archival >>  empty_operator_2
+    empty_operator_1 >> batch_id_generation_extraction >> tlc_taxi_data_downloader_extraction_to_s3 >> tlc_taxi_data_lookup_downloader_extraction_to_s3 >> landing_archival >>  empty_operator_2
 
 

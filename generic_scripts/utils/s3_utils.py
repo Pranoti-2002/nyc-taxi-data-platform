@@ -95,11 +95,21 @@ def read_etl_batch_id(etl_batch_id_path, source_system):
         logger.info("Reverting back to local file path")
 
     project_root = Path(__file__).resolve().parents[2]
-    etl_batch_id_path = project_root / "parfiles" / source_system / f"{source_system}_batch_id.txt"
+    batch_file_candidates = [
+        project_root / "parfiles" / source_system / "etl_batch_id.txt",
+        project_root / "parfiles" / source_system / f"{source_system}_batch_id.txt",
+    ]
 
-    with open(etl_batch_id_path, "r", encoding="utf-8") as f:
-        etl_batch_id = f.readline().strip()
-    return etl_batch_id
+    for candidate_path in batch_file_candidates:
+        if candidate_path.exists():
+            with open(candidate_path, "r", encoding="utf-8") as f:
+                etl_batch_id = f.readline().strip()
+            if etl_batch_id:
+                return etl_batch_id
+
+    raise FileNotFoundError(
+        f"No batch ID file found for source_system '{source_system}' in {project_root / 'parfiles' / source_system}"
+    )
 
 def get_bucket_name():
     load_dotenv(

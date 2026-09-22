@@ -2,7 +2,7 @@
 Creates and records a new etl_batch_id for a source system and phase, writes it to the local parfiles directory, and uploads the same value to S3 for downstream pipeline tracking.
 Usage: python batch_id_generation.py <source_system> <phase_name>
 example: python batch_id_generation.py cv1 landing
-The script checks for incomplete batch ids in DATAFORGE_AUDIT.BATCH_LOG before creating a new one and stores the latest value in /opt/project/parfiles/<source_system>/etl_batch_id.txt.
+The script checks for incomplete batch ids in DATAFORGE_AUDIT.BATCH_LOG before creating a new one and stores the latest value in /opt/project/parfiles/<source_system>/<source_system>_batch_id.txt.
 ------------------- ------------------- ----------------------"""
 
 import datetime

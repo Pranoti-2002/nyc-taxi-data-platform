@@ -1,4 +1,4 @@
-CREATE EXTERNAL TABLE IF NOT EXISTS dataforge_landing.fhvhv_trips (
+CREATE EXTERNAL TABLE IF NOT EXISTS dataforge_landing.hvfhv_trips (
     hvfhs_license_num STRING,   
     dispatching_base_num STRING,
     originating_base_num STRING,
@@ -30,4 +30,4 @@ PARTITIONED BY (
     etl_batch_id STRING
 )
 STORED AS PARQUET
-LOCATION 's3a://dataforge-lake/raw/taxi/fhvhv/';
+LOCATION 's3a://dataforge-lake/raw/taxi/hvfhv/';

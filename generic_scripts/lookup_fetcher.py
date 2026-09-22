@@ -55,7 +55,7 @@ TAXI_ZONES_PARQUET_PATH = (
 
 
 LOOKUP_CSV_S3_KEY = (
-    "/raw/lookup/taxi_zone_loc_ref/taxi_zone_lookup.csv"
+    "raw/lookup/taxi_zone_loc_ref/taxi_zone_lookup.csv"
 )
 
 TAXI_ZONES_PARQUET_S3_KEY = (

@@ -6,15 +6,19 @@ This script skips an upload when the corresponding batch-partitioned object alre
 ------------------- ------------------- ----------------------"""
 
 import argparse
-import json
 from datetime import datetime
 from pathlib import Path
 import logging
 
 import boto3
-import pyarrow.parquet as pq
 import requests
 
+try:
+    import pyarrow.parquet as pq
+except ModuleNotFoundError:  # pragma: no cover - optional dependency for local/test import
+    pq = None
+
+from generic_scripts.utils.hive_connection import get_hive_connection
 from generic_scripts.utils.s3_utils import (
     get_bucket_name,
     read_etl_batch_id,
@@ -33,11 +37,11 @@ TAXI_FILE_PREFIX = {
     "hvfhv": "fhvhv_tripdata",
 }
 
-TAXI_TYPE_ALIASES = {
-    "yellow": {"yellow", "yellow_taxi", "yellow_taxi_ingest"},
-    "green": {"green", "green_taxi", "green_taxi_ingest"},
-    "fhv": {"fhv", "fhv_trips", "fhv_trips_ingest"},
-    "hvfhv": {"hvfhv", "fhvhv_trips", "fhvhv_trips_ingest"},
+TAXI_TABLE_MAP = {
+    "yellow": "yellow_taxi",
+    "green": "green_taxi",
+    "fhv": "fhv_trips",
+    "hvfhv": "fhvhv_trips",
 }
 
 # Note: Add checksum for source data check
@@ -64,9 +68,7 @@ def parse_arguments():
     )
     parser.add_argument(
         "source_system",
-        nargs="?",
-        default=None,
-        help="Optional source system name. If omitted, it is inferred from S3 parameter files.",
+        help="Source system name (for example: geo_sup_bs_6)",
     )
     parser.add_argument(
         "phase_name",
@@ -134,8 +136,18 @@ def validate_download(local_path):
         local_path.stat().st_size,
     )
 
+def refresh_hive_metadata(cursor, schema_name, table_name):
+    """Refresh Hive metadata after new raw partitions are uploaded to S3."""
+    repair_sql = f"MSCK REPAIR TABLE {schema_name}.{table_name}"
+    logger.info("Refreshing Hive metadata with: %s", repair_sql)
+    cursor.execute(repair_sql)
+
+
 def validate_parquet(local_path):
     local_path = Path(local_path)
+
+    if pq is None:
+        raise ModuleNotFoundError("pyarrow is required to validate parquet files")
 
     try:
         parquet_file = pq.ParquetFile(local_path)
@@ -167,77 +179,6 @@ def build_s3_key(taxi_type, year_month, file_name, etl_batch_id):
     )
 
 
-def list_parameter_files(bucket_name, source_system):
-    prefix = f"parfiles/{source_system}/"
-    response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
-    return [
-        item["Key"]
-        for item in response.get("Contents", [])
-        if item["Key"].endswith("_prm.json")
-    ]
-
-
-def read_parameter_file(bucket_name, key):
-    response = s3_client.get_object(Bucket=bucket_name, Key=key)
-    return json.loads(response["Body"].read().decode("utf-8"))
-
-
-def taxi_type_matches_parameter(taxi_type, parameter_row):
-    match_tokens = TAXI_TYPE_ALIASES.get(taxi_type, {taxi_type})
-    wf_name = str(parameter_row.get("wf_name", "")).lower()
-    source_table = str(parameter_row.get("source_table", "")).lower()
-    target_table = str(parameter_row.get("target_table", "")).lower()
-    return any(
-        token in wf_name or token in source_table or token in target_table
-        for token in match_tokens
-    )
-
-
-def resolve_source_system(bucket_name, taxi_types):
-    paginator = s3_client.get_paginator("list_objects_v2")
-    candidates = set()
-
-    for page in paginator.paginate(Bucket=bucket_name, Prefix="parfiles/"):
-        for item in page.get("Contents", []):
-            key = item["Key"]
-            if not key.endswith("_prm.json"):
-                continue
-
-            parts = key.split("/")
-            if len(parts) < 3:
-                continue
-
-            source_system = parts[1]
-            parameter_row = read_parameter_file(bucket_name, key)
-            if any(taxi_type_matches_parameter(taxi_type, parameter_row) for taxi_type in taxi_types):
-                candidates.add(source_system)
-
-    if len(candidates) == 1:
-        return next(iter(candidates))
-    if len(candidates) > 1:
-        raise ValueError(
-            f"Multiple source systems match the requested taxi type(s): {sorted(candidates)}. "
-            "Please pass source_system explicitly."
-        )
-    return None
-
-
-def resolve_workflow_parameters(bucket_name, source_system, taxi_types):
-    workflow_parameters = {}
-    for key in list_parameter_files(bucket_name, source_system):
-        parameter_row = read_parameter_file(bucket_name, key)
-        for taxi_type in taxi_types:
-            if taxi_type_matches_parameter(taxi_type, parameter_row):
-                workflow_parameters[taxi_type] = parameter_row
-                logger.info(
-                    "Loaded workflow parameters for %s from s3://%s/%s",
-                    taxi_type,
-                    bucket_name,
-                    key,
-                )
-    return workflow_parameters
-
-
 def main():
     logging.basicConfig(
         level=logging.INFO,
@@ -249,22 +190,10 @@ def main():
     end_date = args.end_date
     bucket_name = get_bucket_name()
     source_system = args.source_system
-
-    if source_system is None:
-        source_system = resolve_source_system(bucket_name, taxi_types)
-        if source_system is None:
-            raise ValueError(
-                "Could not resolve a source_system from S3 parameter files. "
-                "Please pass source_system explicitly."
-            )
-        logger.warning(
-            "No source system was supplied; inferred source_system='%s' from S3 parameter files.",
-            source_system,
-        )
+    phase_name = args.phase_name
 
     etl_batch_id_path = f"s3://{bucket_name}/parfiles/{source_system}/{source_system}_batch_id.txt"
-    logger.info(etl_batch_id_path)
-    workflow_parameters = resolve_workflow_parameters(bucket_name, source_system, taxi_types)
+    logger.info("Using source_system=%s, phase_name=%s, batch_id_path=%s", source_system, phase_name, etl_batch_id_path)
     etl_batch_id = read_etl_batch_id(etl_batch_id_path, source_system)
 
     if not etl_batch_id:
@@ -276,37 +205,17 @@ def main():
     logger.info("Processing %d month(s): %s", len(months), ", ".join(months))
 
     for taxi_type in taxi_types:
-        parameter_row = workflow_parameters.get(taxi_type)
-        target_table = taxi_type
-        source_schema = "NYC_GOV"
-        target_schema = "dataforge_landing"
-
-        if parameter_row:
-            source_schema = parameter_row.get("source_schema") or source_schema
-            target_schema = parameter_row.get("target_schema") or target_schema
-            target_table = parameter_row.get("target_table") or parameter_row.get("source_table") or target_table
-            etl_batch_id = parameter_row.get("etl_batch_id") or etl_batch_id
-            logger.info(
-                "Using workflow metadata for %s: source_schema=%s, target_schema=%s, target_table=%s, etl_batch_id=%s",
-                taxi_type,
-                source_schema,
-                target_schema,
-                target_table,
-                etl_batch_id,
-            )
-
         for year_month in months:
             url = build_tlc_url(taxi_type, year_month)
             file_name = url.split("/")[-1]
             local_path = Path("/opt/project/data/bronze") / file_name
             s3_key = build_s3_key(taxi_type, year_month, file_name, etl_batch_id)
             logger.info(
-                "Processing %s data for %s: local_path=%s, s3_key=%s, target_table=%s",
+                "Processing %s data for %s: local_path=%s, s3_key=%s",
                 taxi_type,
                 year_month,
                 local_path,
                 s3_key,
-                target_table,
             )
             if s3_object_exists(bucket_name, s3_key):
                 logger.info("Skipping upload; S3 object already exists: s3://%s/%s", bucket_name, s3_key)
@@ -315,6 +224,24 @@ def main():
                 validate_download(local_path)
                 validate_parquet(local_path)
                 write_s3_path(bucket_name, s3_key, local_path)
+
+                try:
+                    table_name = TAXI_TABLE_MAP.get(taxi_type)
+                    if not table_name:
+                        raise ValueError(f"No Hive table mapping found for taxi type '{taxi_type}'")
+                    conn = get_hive_connection()
+                    cursor = conn.cursor()
+                    refresh_hive_metadata(cursor, "dataforge_landing", table_name)
+                    cursor.close()
+                    conn.close()
+                    logger.info("Refreshed Hive metadata for dataforge_landing.%s", table_name)
+                except Exception as error:
+                    logger.warning(
+                        "Hive metadata refresh failed after uploading %s/%s: %s",
+                        taxi_type,
+                        year_month,
+                        error,
+                    )
 
     logger.info("TLC fetch completed successfully for %d month(s)", len(months))
 
