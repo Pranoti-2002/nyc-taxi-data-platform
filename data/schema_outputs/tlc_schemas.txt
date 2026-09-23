@@ -1,0 +1,105 @@
+================================================================================
+FILE: /opt/project/data/bronze/yellow_tripdata_2024-01.parquet
+================================================================================
+
+Column Name                        Data Type                     Nullable  
+--------------------------------------------------------------------------------
+VendorID                           int32                         True      
+tpep_pickup_datetime               timestamp[us]                 True      
+tpep_dropoff_datetime              timestamp[us]                 True      
+passenger_count                    int64                         True      
+trip_distance                      double                        True      
+RatecodeID                         int64                         True      
+store_and_fwd_flag                 large_string                  True      
+PULocationID                       int32                         True      
+DOLocationID                       int32                         True      
+payment_type                       int64                         True      
+fare_amount                        double                        True      
+extra                              double                        True      
+mta_tax                            double                        True      
+tip_amount                         double                        True      
+tolls_amount                       double                        True      
+improvement_surcharge              double                        True      
+total_amount                       double                        True      
+congestion_surcharge               double                        True      
+Airport_fee                        double                        True      
+--------------------------------------------------------------------------------
+Total columns: 19
+
+================================================================================
+FILE: /opt/project/data/bronze/green_tripdata_2024-01.parquet
+================================================================================
+
+Column Name                        Data Type                     Nullable  
+--------------------------------------------------------------------------------
+VendorID                           int32                         True      
+lpep_pickup_datetime               timestamp[us]                 True      
+lpep_dropoff_datetime              timestamp[us]                 True      
+store_and_fwd_flag                 large_string                  True      
+RatecodeID                         int64                         True      
+PULocationID                       int32                         True      
+DOLocationID                       int32                         True      
+passenger_count                    int64                         True      
+trip_distance                      double                        True      
+fare_amount                        double                        True      
+extra                              double                        True      
+mta_tax                            double                        True      
+tip_amount                         double                        True      
+tolls_amount                       double                        True      
+ehail_fee                          double                        True      
+improvement_surcharge              double                        True      
+total_amount                       double                        True      
+payment_type                       int64                         True      
+trip_type                          int64                         True      
+congestion_surcharge               double                        True      
+--------------------------------------------------------------------------------
+Total columns: 20
+
+================================================================================
+FILE: /opt/project/data/bronze/fhv_tripdata_2024-01.parquet
+================================================================================
+
+Column Name                        Data Type                     Nullable  
+--------------------------------------------------------------------------------
+dispatching_base_num               large_string                  True      
+pickup_datetime                    timestamp[us]                 True      
+dropOff_datetime                   timestamp[us]                 True      
+PUlocationID                       int64                         True      
+DOlocationID                       int64                         True      
+SR_Flag                            int64                         True      
+Affiliated_base_number             large_string                  True      
+--------------------------------------------------------------------------------
+Total columns: 7
+
+================================================================================
+FILE: /opt/project/data/bronze/fhvhv_tripdata_2024-01.parquet
+================================================================================
+
+Column Name                        Data Type                     Nullable  
+--------------------------------------------------------------------------------
+hvfhs_license_num                  large_string                  True      
+dispatching_base_num               large_string                  True      
+originating_base_num               large_string                  True      
+request_datetime                   timestamp[us]                 True      
+on_scene_datetime                  timestamp[us]                 True      
+pickup_datetime                    timestamp[us]                 True      
+dropoff_datetime                   timestamp[us]                 True      
+PULocationID                       int32                         True      
+DOLocationID                       int32                         True      
+trip_miles                         double                        True      
+trip_time                          int64                         True      
+base_passenger_fare                double                        True      
+tolls                              double                        True      
+bcf                                double                        True      
+sales_tax                          double                        True      
+congestion_surcharge               double                        True      
+airport_fee                        double                        True      
+tips                               double                        True      
+driver_pay                         double                        True      
+shared_request_flag                large_string                  True      
+shared_match_flag                  large_string                  True      
+access_a_ride_flag                 large_string                  True      
+wav_request_flag                   large_string                  True      
+wav_match_flag                     large_string                  True      
+--------------------------------------------------------------------------------
+Total columns: 24
