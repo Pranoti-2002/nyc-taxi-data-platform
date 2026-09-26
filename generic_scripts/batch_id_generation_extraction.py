@@ -7,6 +7,7 @@ The script checks for incomplete batch ids in DATAFORGE_AUDIT.BATCH_LOG before c
 
 import datetime
 import logging
+import os
 import sys
 from typing import Optional
 import os
@@ -116,27 +117,12 @@ def generate_etl_batch_id(cursor, source_system: str, phase_name: str) -> str:
 
         logger.info(f"Generated etl_batch_id: {etl_batch_id}")
         
-        # Write to s3 path
-        bucket =  "dataforge-lake"
-        key = f"parfiles/{source_system}/{source_system}_batch_id.txt"
-        
         # Write to local file
-        file_path = Path("/opt/project") / "parfiles" / source_system / f"{source_system}_batch_id.txt"
-        try:
-            file_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(etl_batch_id)
-            logger.info(f"etl_batch_id written to {file_path}")
-            
-            # Write to S3
-            write_s3_path(bucket, key, file_path)
-            logger.info(f"etl_batch_id written to s3 path with bucket {bucket} and key {key}")
+        file_path = f"/opt/project/parfiles/{source_system}/etl_batch_id.txt"
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(etl_batch_id)
         
-        except Exception as e:
-            logger.error(f"failed to push etl_batch_id into local/s3: {e}", exc_info=True)  
-            raise   
-        
-        
+        logger.info(f"etl_batch_id written to {file_path}")
         
         return etl_batch_id
 

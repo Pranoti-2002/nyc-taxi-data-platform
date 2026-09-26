@@ -5,6 +5,13 @@ Example: python tlc_fetcher.py --taxi-type yellow --start-date 2024-01 --end-dat
 This script skips an upload when the corresponding batch-partitioned object already exists in S3.
 ------------------- ------------------- ----------------------"""
 
+"""------------------- TLC Trip Data Fetcher -------------------
+Downloads monthly NYC Taxi and Limousine Commission trip data, validates each Parquet file, and uploads it to the raw S3 partition for the current ETL batch.
+Usage: python tlc_fetcher.py --taxi-type TYPE --start-date YYYY-MM --end-date YYYY-MM <source_system> <phase_name>
+Example: python tlc_fetcher.py --taxi-type yellow --start-date 2024-01 --end-date 2024-02 nyc_taxi ingestion
+This script skips an upload when the corresponding batch-partitioned object already exists in S3.
+------------------- ------------------- ----------------------"""
+
 import argparse
 from datetime import datetime
 from pathlib import Path
@@ -51,6 +58,7 @@ def parse_arguments():
 
     parser.add_argument(
         "--taxi-type",
+        nargs="+",
         nargs="+",
         required=True,
         choices=["yellow", "green", "fhv", "hvfhv"],
@@ -105,14 +113,19 @@ def download_file(url, local_path):
     local_path.parent.mkdir(parents=True, exist_ok=True)  # Create directories if they don't exist
 
     logger.info("Downloading source file from %s to %s", url, local_path)
+    logger.info("Downloading source file from %s to %s", url, local_path)
     response = requests.get(url, stream=True, timeout=60)  # Set a timeout for the request
     response.raise_for_status()  # Raise an error for bad responses
 
+    bytes_downloaded = 0
     bytes_downloaded = 0
     with open(local_path, 'wb') as file:
         for chunk in response.iter_content(chunk_size = 1024*1024):  # Download in chunks of 1MB
             if chunk:  # Filter out keep-alive new chunks
                 file.write(chunk)
+                bytes_downloaded += len(chunk)
+
+    logger.info("Downloaded %d bytes to %s", bytes_downloaded, local_path)
                 bytes_downloaded += len(chunk)
 
     logger.info("Downloaded %d bytes to %s", bytes_downloaded, local_path)
@@ -161,6 +174,10 @@ def validate_parquet(local_path):
             "Parquet validation passed: %s (%d rows)",
             local_path,
             parquet_file.metadata.num_rows,
+        logger.info(
+            "Parquet validation passed: %s (%d rows)",
+            local_path,
+            parquet_file.metadata.num_rows,
         )
 
     except Exception as error:
@@ -184,7 +201,12 @@ def main():
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s - %(message)s",
     )
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s - %(message)s",
+    )
     args = parse_arguments()
+    taxi_types = args.taxi_type
     taxi_types = args.taxi_type
     start_date = args.start_date
     end_date = args.end_date
@@ -202,6 +224,7 @@ def main():
     logger.info("Using ETL batch ID %s from %s", etl_batch_id, etl_batch_id_path)
 
     months = generate_months(start_date, end_date)
+    logger.info("Processing %d month(s): %s", len(months), ", ".join(months))
     logger.info("Processing %d month(s): %s", len(months), ", ".join(months))
 
     for taxi_type in taxi_types:
