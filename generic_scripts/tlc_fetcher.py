@@ -59,7 +59,6 @@ def parse_arguments():
     parser.add_argument(
         "--taxi-type",
         nargs="+",
-        nargs="+",
         required=True,
         choices=["yellow", "green", "fhv", "hvfhv"],
         help="One or more taxi types to fetch (yellow, green, fhv, hvfhv)",
@@ -113,11 +112,9 @@ def download_file(url, local_path):
     local_path.parent.mkdir(parents=True, exist_ok=True)  # Create directories if they don't exist
 
     logger.info("Downloading source file from %s to %s", url, local_path)
-    logger.info("Downloading source file from %s to %s", url, local_path)
     response = requests.get(url, stream=True, timeout=60)  # Set a timeout for the request
     response.raise_for_status()  # Raise an error for bad responses
 
-    bytes_downloaded = 0
     bytes_downloaded = 0
     with open(local_path, 'wb') as file:
         for chunk in response.iter_content(chunk_size = 1024*1024):  # Download in chunks of 1MB
@@ -126,7 +123,7 @@ def download_file(url, local_path):
                 bytes_downloaded += len(chunk)
 
     logger.info("Downloaded %d bytes to %s", bytes_downloaded, local_path)
-                bytes_downloaded += len(chunk)
+    bytes_downloaded += len(chunk)
 
     logger.info("Downloaded %d bytes to %s", bytes_downloaded, local_path)
 
@@ -169,11 +166,10 @@ def validate_parquet(local_path):
             raise ValueError(
                 f"Parquet file contains no rows: {local_path}"
             )
-
         logger.info(
             "Parquet validation passed: %s (%d rows)",
             local_path,
-            parquet_file.metadata.num_rows,
+            parquet_file.metadata.num_rows,)
         logger.info(
             "Parquet validation passed: %s (%d rows)",
             local_path,
@@ -224,7 +220,6 @@ def main():
     logger.info("Using ETL batch ID %s from %s", etl_batch_id, etl_batch_id_path)
 
     months = generate_months(start_date, end_date)
-    logger.info("Processing %d month(s): %s", len(months), ", ".join(months))
     logger.info("Processing %d month(s): %s", len(months), ", ".join(months))
 
     for taxi_type in taxi_types:

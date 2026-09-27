@@ -15,7 +15,6 @@ from pathlib import Path
 
 from generic_scripts.utils.hive_connection import get_hive_connection
 from generic_scripts.utils.s3_utils import write_s3_path
-from generic_scripts.utils.s3_utils import write_s3_path
 
 # Initialize logging
 logging.basicConfig(
