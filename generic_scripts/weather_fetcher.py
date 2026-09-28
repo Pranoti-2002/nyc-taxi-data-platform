@@ -53,6 +53,25 @@ def validate_date(date_string: str) -> datetime:
         ) from exc
 
 
+def parse_range_boundary(date_string: str, *, end_of_month: bool) -> datetime:
+    """Parse a date or month boundary used by the processing range."""
+    try:
+        return datetime.strptime(date_string, "%Y-%m-%d")
+    except ValueError:
+        try:
+            month = datetime.strptime(date_string, "%Y-%m")
+        except ValueError as exc:
+            raise ValueError(
+                f"Invalid date '{date_string}'. Expected YYYY-MM or YYYY-MM-DD"
+            ) from exc
+
+    if end_of_month:
+        month = month.replace(
+            day=calendar.monthrange(month.year, month.month)[1]
+        )
+    return month
+
+
 def fetch_weather_data(start_date: str, end_date: str) -> dict:
     """
     Fetch historical hourly weather data for NYC.
@@ -172,10 +191,10 @@ def get_month_ranges(
     end_date: str,
 ) -> list[tuple[str, str]]:
     """
-    Split the requested date range into monthly date ranges.
+    Split a YYYY-MM or YYYY-MM-DD range into monthly date ranges.
 
     Example:
-        2024-01-01 to 2024-02-29
+        2024-01 to 2024-02
 
     Returns:
         [
@@ -183,8 +202,8 @@ def get_month_ranges(
             ("2024-02-01", "2024-02-29"),
         ]
     """
-    start = validate_date(start_date)
-    end = validate_date(end_date)
+    start = parse_range_boundary(start_date, end_of_month=False)
+    end = parse_range_boundary(end_date, end_of_month=True)
 
     if start > end:
         raise ValueError(
@@ -370,18 +389,6 @@ def main():
     )
 
     parser.add_argument(
-        "--start-date",
-        required=True,
-        help="Start date in YYYY-MM-DD format",
-    )
-
-    parser.add_argument(
-        "--end-date",
-        required=True,
-        help="End date in YYYY-MM-DD format",
-    )
-
-    parser.add_argument(
     "--bucket-name",
     required=True,
     help="S3 bucket name",
@@ -396,14 +403,21 @@ def main():
 
     logger.info("Starting NYC weather ingestion")
 
-    etl_batch_id = read_etl_batch_id(
-    source_system=args.source_system
-   )
+    source_system = args.source_system
+    etl_batch_id = read_etl_batch_id(source_system )
+    processing_range_file = Path(f"/opt/project/parfiles/processing_range_output.txt")
+    range_parts = processing_range_file.read_text(encoding="utf-8").strip().split("|")
+    if len(range_parts) != 2 or not all(part.strip() for part in range_parts):
+        raise ValueError(
+            f"Invalid processing range in {processing_range_file}; "
+            "expected format YYYY-MM|YYYY-MM"
+        )
 
-    month_ranges = get_month_ranges(
-        start_date=args.start_date,
-        end_date=args.end_date,
-    )
+    start_date, end_date = (part.strip() for part in range_parts)
+    logger.info("Start date: %s", start_date)
+    logger.info("End date: %s", end_date)
+
+    month_ranges = get_month_ranges(start_date,end_date)
 
     logger.info(
         "Weather ingestion contains %s monthly range(s)",

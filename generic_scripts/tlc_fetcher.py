@@ -53,16 +53,6 @@ def parse_arguments():
         help="One or more taxi types to fetch (yellow, green, fhv, hvfhv)",
     )
     parser.add_argument(
-        "--start-date",
-        required=True,
-        help="Start date in YYYY-MM format",
-    )
-    parser.add_argument(
-        "--end-date",
-        required=True,
-        help="End date in YYYY-MM format",
-    )
-    parser.add_argument(
         "source_system",
         nargs="?",
         default=None,
@@ -245,10 +235,21 @@ def main():
     )
     args = parse_arguments()
     taxi_types = args.taxi_type
-    start_date = args.start_date
-    end_date = args.end_date
     bucket_name = get_bucket_name()
     source_system = args.source_system
+    processing_range_file = Path(
+        f"/opt/project/parfiles/processing_range_output.txt"
+    )
+    range_parts = processing_range_file.read_text(encoding="utf-8").strip().split("|")
+    if len(range_parts) != 2 or not all(part.strip() for part in range_parts):
+        raise ValueError(
+            f"Invalid processing range in {processing_range_file}; "
+            "expected format YYYY-MM|YYYY-MM"
+        )
+
+    start_date, end_date = (part.strip() for part in range_parts)
+    logger.info("Start date: %s", start_date)
+    logger.info("End date: %s", end_date)
 
     if source_system is None:
         source_system = resolve_source_system(bucket_name, taxi_types)
