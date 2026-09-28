@@ -1,4 +1,4 @@
-CREATE EXTERNAL TABLE IF NOT EXISTS dataforge_landing.hvfhv_trips (
+CREATE EXTERNAL TABLE IF NOT EXISTS dataforge_landing.fhvhv_trips (
     hvfhs_license_num STRING,   
     dispatching_base_num STRING,
     originating_base_num STRING,
