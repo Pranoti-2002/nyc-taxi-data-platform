@@ -317,7 +317,7 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: nyc_taxi_pgadminW
+    container_name: nyc_taxi_pgadmin
 
     depends_on:
       postgres:
@@ -390,7 +390,7 @@ services:
       SERVICE_OPTS: >-
         -Dhive.metastore.uris=thrift://hive:9083
         -Dhive.server2.webui.port=0
-      IS_RESUME: "true"
+      IS_RESUME: "false"
 
     ports:
       - "10000:10000"

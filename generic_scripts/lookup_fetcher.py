@@ -9,11 +9,12 @@ import logging
 import shutil
 import zipfile
 from pathlib import Path
-
+import os
 import boto3
 import geopandas as gpd
 import requests
-
+from dotenv import load_dotenv
+from generic_scripts.utils.s3_utils import write_s3_path,s3_object_exists
 
 logging.basicConfig(
     level=logging.INFO,
@@ -58,7 +59,7 @@ LOOKUP_CSV_S3_KEY = (
 )
 
 TAXI_ZONES_PARQUET_S3_KEY = (
-    "raw/lookup/taxi_zones/taxi_zones.parquet"
+    "raw/lookup/taxi_zone_shapefile/taxi_zones.parquet"
 )
 
 
@@ -191,82 +192,57 @@ def convert_taxi_zones_to_parquet(
     return output_path
 
 
-def upload_to_s3(
-    local_file_path: Path,
-    bucket_name: str,
-    s3_key: str,
-) -> None:
-    """
-    Upload a local file to S3.
-    """
-
-    s3_client = boto3.client("s3")
-
-    logger.info(
-        "Uploading %s to s3://%s/%s",
-        local_file_path,
-        bucket_name,
-        s3_key,
-    )
-
-    s3_client.upload_file(
-        str(local_file_path),
-        bucket_name,
-        s3_key,
-    )
-
-    logger.info(
-        "Successfully uploaded to "
-        "s3://%s/%s",
-        bucket_name,
-        s3_key,
-    )
-
 
 def main() -> None:
-
-    bucket_name = "dataforge-lake"
     
-    # Download Taxi Zone Lookup CSV
+    load_dotenv()
+    bucket_name = os.getenv("S3_BUCKET_NAME")
 
-    download_file(
-        url=TAXI_ZONE_LOOKUP_URL,
-        output_path=LOOKUP_CSV_PATH,
-    )
-    # Upload Taxi Zone Lookup CSV
+    # Check if the file already exists
+    if s3_object_exists(bucket_name, LOOKUP_CSV_S3_KEY) :
+        logger.info("Skipping upload; S3 object already exists: s3://%s/%s", bucket_name, LOOKUP_CSV_S3_KEY)
+    if s3_object_exists(bucket_name, TAXI_ZONES_PARQUET_S3_KEY):
+        logger.info("Skipping upload; S3 object already exists: s3://%s/%s", bucket_name, TAXI_ZONES_PARQUET_S3_KEY)    
+    else:                       
+        # Download Taxi Zone Lookup CSV                            
+        download_file(
+            url=TAXI_ZONE_LOOKUP_URL,
+            output_path=LOOKUP_CSV_PATH,
+        )
+        # Upload Taxi Zone Lookup CSV
 
-    upload_to_s3(
-        local_file_path=LOOKUP_CSV_PATH,
-        bucket_name=bucket_name,
-        s3_key=LOOKUP_CSV_S3_KEY,
-    )
-    
-    # Download Taxi Zones ZIP
+        write_s3_path(
+            file_path=LOOKUP_CSV_PATH,
+            bucket=bucket_name,
+            s3_key=LOOKUP_CSV_S3_KEY,
+        )
 
-    download_file(
-        url=TAXI_ZONES_ZIP_URL,
-        output_path=TAXI_ZONES_ZIP_PATH,
-    )
+        # Download Taxi Zones ZIP
 
-    # Extract ZIP
+        download_file(
+            url=TAXI_ZONES_ZIP_URL,
+            output_path=TAXI_ZONES_ZIP_PATH,
+        )
 
-    extract_taxi_zones(
-        zip_path=TAXI_ZONES_ZIP_PATH,
-        extract_dir=TAXI_ZONES_EXTRACT_DIR,
-    )
-    # Convert Shapefile → GeoParquet
+        # Extract ZIP
 
-    convert_taxi_zones_to_parquet(
-        extract_dir=TAXI_ZONES_EXTRACT_DIR,
-        output_path=TAXI_ZONES_PARQUET_PATH,
-    )
+        extract_taxi_zones(
+            zip_path=TAXI_ZONES_ZIP_PATH,
+            extract_dir=TAXI_ZONES_EXTRACT_DIR,
+        )
+        # Convert Shapefile → GeoParquet
 
-    # Upload GeoParquet to S3
-    upload_to_s3(
-        local_file_path=TAXI_ZONES_PARQUET_PATH,
-        bucket_name=bucket_name,
-        s3_key=TAXI_ZONES_PARQUET_S3_KEY,
-    )
+        convert_taxi_zones_to_parquet(
+            extract_dir=TAXI_ZONES_EXTRACT_DIR,
+            output_path=TAXI_ZONES_PARQUET_PATH,
+        )
+
+        # Upload GeoParquet to S3
+        write_s3_path(
+            file_path=TAXI_ZONES_PARQUET_PATH,
+            bucket=bucket_name,
+            s3_key=TAXI_ZONES_PARQUET_S3_KEY,
+        )
 
 
 if __name__ == "__main__":

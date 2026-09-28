@@ -17,7 +17,7 @@ with DAG(
         task_id="batch_id_generation",
         bash_command=(
             "cd /opt/project && "
-            "python -m generic_scripts.batch_id_generation "
+            "python -m generic_scripts.batch_id_generation_extraction "
             "trip_demand_dataforge landing"
         ),
     )
@@ -25,7 +25,7 @@ with DAG(
         task_id="weather_batch_id_generation",
         bash_command=(
             "cd /opt/project && "
-            "python -m generic_scripts.batch_id_generation "
+            "python -m generic_scripts.batch_id_generation_extraction "
             "nyc_weather landing"
         ),
     )

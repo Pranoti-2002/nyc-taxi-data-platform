@@ -12,9 +12,14 @@ from pathlib import Path
 import logging
 
 import boto3
-import pyarrow.parquet as pq
 import requests
 
+try:
+    import pyarrow.parquet as pq
+except ModuleNotFoundError:  # pragma: no cover - optional dependency for local/test import
+    pq = None
+
+from generic_scripts.utils.hive_connection import get_hive_connection
 from generic_scripts.utils.s3_utils import (
     get_bucket_name,
     read_etl_batch_id,
@@ -40,6 +45,13 @@ TAXI_TYPE_ALIASES = {
     "hvfhv": {"hvfhv", "fhvhv_trips", "fhvhv_trips_ingest"},
 }
 
+TAXI_TABLE_MAP = {
+    "yellow": "yellow_taxi",
+    "green": "green_taxi",
+    "fhv": "fhv_trips",
+    "hvfhv": "fhvhv_trips",
+}
+
 # Note: Add checksum for source data check
 
 def parse_arguments():
@@ -53,10 +65,20 @@ def parse_arguments():
         help="One or more taxi types to fetch (yellow, green, fhv, hvfhv)",
     )
     parser.add_argument(
+        "--start-date",
+        required=False,
+        help="Start date in YYYY-MM format",
+    )
+    parser.add_argument(
+        "--end-date",
+        required=False,
+        help="End date in YYYY-MM format",
+    )
+    parser.add_argument(
         "source_system",
         nargs="?",
         default=None,
-        help="Optional source system name. If omitted, it is inferred from S3 parameter files.",
+        help="Optional source system; inferred from S3 parameter files when omitted",
     )
     parser.add_argument(
         "phase_name",
@@ -124,8 +146,18 @@ def validate_download(local_path):
         local_path.stat().st_size,
     )
 
+def refresh_hive_metadata(cursor, schema_name, table_name):
+    """Refresh Hive metadata after new raw partitions are uploaded to S3."""
+    repair_sql = f"MSCK REPAIR TABLE {schema_name}.{table_name}"
+    logger.info("Refreshing Hive metadata with: %s", repair_sql)
+    cursor.execute(repair_sql)
+
+
 def validate_parquet(local_path):
     local_path = Path(local_path)
+
+    if pq is None:
+        raise ModuleNotFoundError("pyarrow is required to validate parquet files")
 
     try:
         parquet_file = pq.ParquetFile(local_path)
@@ -134,7 +166,6 @@ def validate_parquet(local_path):
             raise ValueError(
                 f"Parquet file contains no rows: {local_path}"
             )
-
         logger.info(
             "Parquet validation passed: %s (%d rows)",
             local_path,
@@ -155,7 +186,6 @@ def build_s3_key(taxi_type, year_month, file_name, etl_batch_id):
         f"etl_batch_id={etl_batch_id}/"
         f"{file_name}"
     )
-
 
 def list_parameter_files(bucket_name, source_system):
     prefix = f"parfiles/{source_system}/"
@@ -227,7 +257,6 @@ def resolve_workflow_parameters(bucket_name, source_system, taxi_types):
                 )
     return workflow_parameters
 
-
 def main():
     logging.basicConfig(
         level=logging.INFO,
@@ -237,17 +266,20 @@ def main():
     taxi_types = args.taxi_type
     bucket_name = get_bucket_name()
     source_system = args.source_system
-    processing_range_file = Path(
-        f"/opt/project/parfiles/processing_range_output.txt"
-    )
-    range_parts = processing_range_file.read_text(encoding="utf-8").strip().split("|")
-    if len(range_parts) != 2 or not all(part.strip() for part in range_parts):
-        raise ValueError(
-            f"Invalid processing range in {processing_range_file}; "
-            "expected format YYYY-MM|YYYY-MM"
-        )
+    if bool(args.start_date) != bool(args.end_date):
+        raise ValueError("--start-date and --end-date must be provided together")
+    if args.start_date and args.end_date:
+        start_date, end_date = args.start_date, args.end_date
+    else:
+        processing_range_file = Path("/opt/project/parfiles/processing_range_output.txt")
+        range_parts = processing_range_file.read_text(encoding="utf-8").strip().split("|")
+        if len(range_parts) != 2 or not all(part.strip() for part in range_parts):
+            raise ValueError(
+                f"Invalid processing range in {processing_range_file}; "
+                "expected format YYYY-MM|YYYY-MM"
+            )
+        start_date, end_date = (part.strip() for part in range_parts)
 
-    start_date, end_date = (part.strip() for part in range_parts)
     logger.info("Start date: %s", start_date)
     logger.info("End date: %s", end_date)
 
@@ -264,7 +296,12 @@ def main():
         )
 
     etl_batch_id_path = f"s3://{bucket_name}/parfiles/{source_system}/{source_system}_batch_id.txt"
-    logger.info(etl_batch_id_path)
+    logger.info(
+        "Using source_system=%s, phase_name=%s, batch_id_path=%s",
+        source_system,
+        args.phase_name,
+        etl_batch_id_path,
+    )
     workflow_parameters = resolve_workflow_parameters(bucket_name, source_system, taxi_types)
     etl_batch_id = read_etl_batch_id(etl_batch_id_path, source_system)
 
@@ -278,7 +315,7 @@ def main():
 
     for taxi_type in taxi_types:
         parameter_row = workflow_parameters.get(taxi_type)
-        target_table = taxi_type
+        target_table = TAXI_TABLE_MAP[taxi_type]
         source_schema = "NYC_GOV"
         target_schema = "dataforge_landing"
 
@@ -316,6 +353,21 @@ def main():
                 validate_download(local_path)
                 validate_parquet(local_path)
                 write_s3_path(bucket_name, s3_key, local_path)
+
+                try:
+                    conn = get_hive_connection()
+                    cursor = conn.cursor()
+                    refresh_hive_metadata(cursor, target_schema, target_table)
+                    cursor.close()
+                    conn.close()
+                    logger.info("Refreshed Hive metadata for %s.%s", target_schema, target_table)
+                except Exception as error:
+                    logger.warning(
+                        "Hive metadata refresh failed after uploading %s/%s: %s",
+                        taxi_type,
+                        year_month,
+                        error,
+                    )
 
     logger.info("TLC fetch completed successfully for %d month(s)", len(months))
 

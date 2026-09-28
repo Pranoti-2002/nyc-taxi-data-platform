@@ -1,4 +1,4 @@
-CREATE EXTERNAL TABLE IF NOT EXISTS lookup.taxi_zone_loc_ref (
+CREATE EXTERNAL TABLE IF NOT EXISTS dataforge_lookup.taxi_zone_loc_ref (
     LocationID INT,
     Borough STRING,
     Zone STRING,
@@ -11,4 +11,4 @@ WITH SERDEPROPERTIES (
     'escapeChar' = '\\'
 )
 STORED AS TEXTFILE
-LOCATION "s3://dataforge-lake/raw/lookup/taxi_zone_loc_ref";
+LOCATION "s3a://dataforge-lake/raw/lookup/taxi_zone_loc_ref";

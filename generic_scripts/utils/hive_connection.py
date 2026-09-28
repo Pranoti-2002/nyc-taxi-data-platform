@@ -1,16 +1,22 @@
 """------------------- Hive Connection Helper -------------------
-Creates a PyHive connection to the configured HiveServer2 instance using environment variables for the host, port, user, and database.
-Usage: imported by ETL scripts; e.g. get_hive_connection()
-Example: connection = get_hive_connection()
-This module centralizes the Hive connection settings shared by batch and SQL execution workflows.
+Creates a shared PyHive connection to the Hive metastore for audit, landing, and transformation jobs using environment variables for host, port, user, and database.
+Usage: from generic_scripts.utils.hive_connection import get_hive_connection
+example: conn = get_hive_connection()
+The helper defaults to hiveserver2:10000 and the default database if the environment is not configured.
 ------------------- ------------------- ----------------------"""
 
 import os
 
-from pyhive import hive
+try:
+    from pyhive import hive
+except ImportError:  # pragma: no cover - optional dependency for local/test environments
+    hive = None
 
 
 def get_hive_connection():
+    if hive is None:
+        raise ModuleNotFoundError("pyhive is required for Hive connectivity")
+
     return hive.Connection(
         host=os.getenv("HIVE_SERVER_HOST", "hiveserver2"),
         port=int(os.getenv("HIVE_SERVER_PORT", "10000")),
