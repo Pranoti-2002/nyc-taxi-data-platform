@@ -242,6 +242,7 @@ def main():
                         year_month,
                         error,
                     )
+                    raise
 
     logger.info("TLC fetch completed successfully for %d month(s)", len(months))
 
