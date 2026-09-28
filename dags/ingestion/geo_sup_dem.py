@@ -37,7 +37,7 @@ with DAG(
         bash_command="python /opt/project/generic_scripts/batch_id_generation_extraction.py geo_sup_bs_6 landing",
     )
     tlc_taxi_data_downloader_extraction_to_s3 = BashOperator(
-        task_id="tlc_yellow_taxi_data_downloader_extraction_to_s3",
+        task_id="tlc_taxi_data_downloader_extraction_to_s3",
         bash_command=(
             "python /opt/project/generic_scripts/tlc_fetcher.py "
             "--taxi-type yellow green fhv hvfhv "
@@ -58,7 +58,7 @@ with DAG(
             "python /opt/project/generic_scripts/landing_archival.py geo_sup_bs_6 dataforge_landing yellow_taxi && "
             "python /opt/project/generic_scripts/landing_archival.py geo_sup_bs_6 dataforge_landing green_taxi && "
             "python /opt/project/generic_scripts/landing_archival.py geo_sup_bs_6 dataforge_landing fhv_trips && "
-            "python /opt/project/generic_scripts/landing_archival.py geo_sup_bs_6 dataforge_landing hvfhv_trips"
+            "python /opt/project/generic_scripts/landing_archival.py geo_sup_bs_6 dataforge_landing fhvhv_trips"
         ),
     )
     empty_operator_2 = EmptyOperator(task_id = 'end')
