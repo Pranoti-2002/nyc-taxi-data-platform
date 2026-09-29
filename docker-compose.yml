@@ -85,6 +85,12 @@ services:
       - |
         set -e
         airflow db migrate
+        if ! airflow connections get spark_default >/dev/null 2>&1; then
+          airflow connections delete spark_default >/dev/null 2>&1 || true
+          airflow connections add spark_default \
+            --conn-type spark \
+            --conn-host spark://spark-master:7077
+        fi
         airflow users create \
           --username "$${AIRFLOW_ADMIN_USERNAME}" \
           --firstname "$${AIRFLOW_ADMIN_FIRSTNAME}" \

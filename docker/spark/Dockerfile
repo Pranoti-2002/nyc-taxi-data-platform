@@ -1,4 +1,9 @@
+FROM python:3.11-slim-bullseye AS python-runtime
+
 FROM apache/spark:3.5.5
+
+COPY --from=python-runtime /usr/local /usr/local
+ENV PYSPARK_PYTHON=/usr/local/bin/python3.11
 
 USER root
 
