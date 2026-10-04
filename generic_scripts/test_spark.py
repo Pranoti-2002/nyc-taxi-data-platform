@@ -1,11 +1,13 @@
-from generic_scripts.utils.sparksession import get_spark_session
+from pyspark.sql import SparkSession
 
-spark = get_spark_session()
+spark = SparkSession.builder \
+    .appName("AirflowSparkConnectionTest") \
+    .getOrCreate()
 
 data = [
-    ("Pranoti", 24),
-    ("Surya", 25),
-    ("Test", 30)
+    ("ABC", 24),
+    ("PQR", 25),
+    ("XYZ", 30)
 ]
 
 df = spark.createDataFrame(data, ["name", "age"])
@@ -14,17 +16,5 @@ print("===== SPARK CONNECTION TEST =====")
 df.show()
 
 print("Number of records:", df.count())
-
-print("===== DATABASES =====")
-spark.sql("SHOW DATABASES").show(truncate=False)
-
-print("===== TABLES =====")
-spark.sql("SHOW TABLES IN dataforge_landing").show(truncate=False)
-
-print("===== READ TABLE =====")
-df = spark.table("dataforge_landing.green_taxi")
-
-df.printSchema()
-df.show(5)
 
 spark.stop()

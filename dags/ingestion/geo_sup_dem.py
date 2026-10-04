@@ -3,7 +3,9 @@ from airflow.operators.python import PythonOperator
 from airflow.operators.bash import BashOperator
 from datetime import datetime, timedelta
 import pendulum
+import os
 from airflow.operators.empty import EmptyOperator
+from generic_scripts.utils.failure_notification import failure_callback
 
 
 # Define the local timezone
@@ -13,14 +15,13 @@ local_tz = pendulum.timezone("Asia/Kolkata")
 default_args = {
     "owner" : "HorizonChaser12",
     "depends_on_past" : False,
-    "email_on_failure" : True,
+    "email_on_failure" : False,
     "email_on_retry" : False,
-    "email" : "suryakant.mangaraj@gmail.com",
     # "retries" : 1,
     "max_active_runs" : 5,
     "dagrun_timeout" : timedelta(hours=1),
     "start_date" : datetime(2026, 5, 1, tzinfo=local_tz),
-    # "end_date" : 
+    "on_failure_callback": failure_callback(os.getenv("receiver_1")), 
 }
 
 with DAG(

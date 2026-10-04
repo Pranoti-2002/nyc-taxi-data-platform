@@ -128,6 +128,13 @@ services:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_ADMIN_USER:?POSTGRES_ADMIN_USER must be set}:${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD must be set}@postgres:${POSTGRES_PORT:?POSTGRES_PORT must be set}/${POSTGRES_ADMIN_DB:?POSTGRES_ADMIN_DB must be set}
       AIRFLOW_HOME: /opt/airflow
       PYTHONPATH: /opt/project
+      AIRFLOW__SMTP__SMTP_HOST: smtp.gmail.com
+      AIRFLOW__SMTP__SMTP_PORT: 587
+      AIRFLOW__SMTP__SMTP_STARTTLS: "True"
+      AIRFLOW__SMTP__SMTP_SSL: "False"
+      AIRFLOW__SMTP__SMTP_USER: ${account_email}
+      AIRFLOW__SMTP__SMTP_PASSWORD: ${account_password}
+      AIRFLOW__SMTP__SMTP_MAIL_FROM: ${account_email}
 
     volumes:
       - ./dags:/opt/airflow/dags
@@ -172,6 +179,14 @@ services:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_ADMIN_USER:?POSTGRES_ADMIN_USER must be set}:${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD must be set}@postgres:${POSTGRES_PORT:?POSTGRES_PORT must be set}/${POSTGRES_ADMIN_DB:?POSTGRES_ADMIN_DB must be set}
       AIRFLOW_HOME: /opt/airflow
       PYTHONPATH: /opt/project
+      AIRFLOW__SMTP__SMTP_HOST: smtp.gmail.com
+      AIRFLOW__SMTP__SMTP_PORT: 587
+      AIRFLOW__SMTP__SMTP_STARTTLS: "True"
+      AIRFLOW__SMTP__SMTP_SSL: "False"
+      AIRFLOW__SMTP__SMTP_USER: ${account_email}
+      AIRFLOW__SMTP__SMTP_PASSWORD: ${account_password}
+      AIRFLOW__SMTP__SMTP_MAIL_FROM: ${account_email}
+
 
     volumes:
       - ./dags:/opt/airflow/dags
@@ -211,6 +226,14 @@ services:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_ADMIN_USER:?POSTGRES_ADMIN_USER must be set}:${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD must be set}@postgres:${POSTGRES_PORT:?POSTGRES_PORT must be set}/${POSTGRES_ADMIN_DB:?POSTGRES_ADMIN_DB must be set}
       AIRFLOW_HOME: /opt/airflow
       PYTHONPATH: /opt/project
+      AIRFLOW__SMTP__SMTP_HOST: smtp.gmail.com
+      AIRFLOW__SMTP__SMTP_PORT: 587
+      AIRFLOW__SMTP__SMTP_STARTTLS: "True"
+      AIRFLOW__SMTP__SMTP_SSL: "False"
+      AIRFLOW__SMTP__SMTP_USER: ${account_email}
+      AIRFLOW__SMTP__SMTP_PASSWORD: ${account_password}
+      AIRFLOW__SMTP__SMTP_MAIL_FROM: ${account_email}
+
 
     volumes:
       - ./dags:/opt/airflow/dags
@@ -250,6 +273,14 @@ services:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_ADMIN_USER:?POSTGRES_ADMIN_USER must be set}:${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD must be set}@postgres:${POSTGRES_PORT:?POSTGRES_PORT must be set}/${POSTGRES_ADMIN_DB:?POSTGRES_ADMIN_DB must be set}
       AIRFLOW_HOME: /opt/airflow
       PYTHONPATH: /opt/project
+      AIRFLOW__SMTP__SMTP_HOST: smtp.gmail.com
+      AIRFLOW__SMTP__SMTP_PORT: 587
+      AIRFLOW__SMTP__SMTP_STARTTLS: "True"
+      AIRFLOW__SMTP__SMTP_SSL: "False"
+      AIRFLOW__SMTP__SMTP_USER: ${account_email}
+      AIRFLOW__SMTP__SMTP_PASSWORD: ${account_password}
+      AIRFLOW__SMTP__SMTP_MAIL_FROM: ${account_email}
+
 
     volumes:
       - ./dags:/opt/airflow/dags
