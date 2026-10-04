@@ -347,7 +347,7 @@ services:
     build:
       context: .
       dockerfile: docker/hive/Dockerfile
-    container_name: hive_database
+    hostname: hive
 
     depends_on:
       postgres:
@@ -358,6 +358,7 @@ services:
 
     environment:
       SERVICE_NAME: metastore
+      IS_RESUME: "true"
       DB_DRIVER: postgres
       HADOOP_CLASSPATH: /opt/hive/lib/*
       HIVE_AUX_JARS_PATH: /opt/hive/lib/postgresql.jar
@@ -373,6 +374,13 @@ services:
     volumes:
       - hive_data:/opt/hive/data
 
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/9083'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
   # ==========================================================
   # HiveServer2 - SQL endpoint for Hue
   # ==========================================================
@@ -385,7 +393,7 @@ services:
 
     depends_on:
       hive:
-        condition: service_started
+        condition: service_healthy
 
     env_file:
       - .env
@@ -394,15 +402,22 @@ services:
       HADOOP_CLASSPATH: "/opt/hive/lib/*"
       SERVICE_NAME: hiveserver2
       SERVICE_OPTS: >-
-        -Dhive.metastore.uris=thrift://hive:9083
         -Dhive.server2.webui.port=0
-      IS_RESUME: "false"
+      IS_RESUME: "true"
 
     ports:
       - "10000:10000"
 
     volumes:
       - hive_data:/opt/hive/data
+      - ./docker/hive/conf/hive-site.xml:/opt/hive/conf/hive-site.xml:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/10000'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
 
   # ==========================================================
   # Hue - SQL editor and data warehouse UI
@@ -416,7 +431,7 @@ services:
       postgres:
         condition: service_healthy
       hiveserver2:
-        condition: service_started
+        condition: service_healthy
       hue-init:
         condition: service_completed_successfully
 
@@ -471,3 +486,7 @@ volumes:
   pgadmin_data:
   hive_data:
   hue_data:
+
+networks:
+  default:
+    name: nyc-taxi-data-platform-network

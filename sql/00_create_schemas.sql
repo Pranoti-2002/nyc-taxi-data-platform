@@ -1,0 +1,3 @@
+CREATE DATABASE IF NOT EXISTS dataforge_audit;
+CREATE DATABASE IF NOT EXISTS dataforge_landing;
+CREATE DATABASE IF NOT EXISTS dataforge_lookup;

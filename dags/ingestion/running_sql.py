@@ -2,6 +2,7 @@ from datetime import datetime
 
 from airflow import DAG
 from airflow.providers.standard.operators.bash import BashOperator
+from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 
 with DAG(
     dag_id="run_sql",
@@ -40,3 +41,13 @@ with DAG(
             "--output-file /opt/project/data/schema_outputs/lookup_schema.txt"
         ),
     )
+
+    test_spark = SparkSubmitOperator(
+        task_id="test_spark",
+        application="/opt/project/generic_scripts/test_spark.py",
+        conn_id="spark_default",
+        name="airflow_spark_connection_test",
+        deploy_mode="client",
+    )
+
+    create_hive_tables >> test_spark
