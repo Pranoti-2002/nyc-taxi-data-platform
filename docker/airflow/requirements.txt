@@ -7,3 +7,4 @@ python-dotenv
 pandas
 pyhive
 thrift_sasl
+google-genai

@@ -1,33 +1,45 @@
 import logging
-from datetime import datetime
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
 import os
-from airflow import DAG
-from airflow.providers.standard.operators.python import PythonOperator
 from airflow.utils.email import send_email_smtp
 import traceback
-from dotenv import load_dotenv
 
-load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 
-def intentional_failure():
-    raise ValueError("This is an intentional test failure")
+def failure_callback(email):
+    def callback(context):
+        failure_context = collect_failure_context(context)
+        ai_analysis = analyze_failure_with_gemini(failure_context)
+        subject, body = build_email_content(failure_context, ai_analysis)
+        send_email_smtp(
+            to=email,
+            subject=subject,
+            html_content=body,
+        )
+    return callback    
 
-
-def failure_callback(context):
-    failure_context = collect_failure_context(context)
-    ai_analysis = analyze_failure_with_gemini(failure_context)
-    subject, body = build_email_content(failure_context, ai_analysis)
-    send_email_smtp(
-        to="sanu.mangaraj77@gmail.com",
-        subject=subject,
-        html_content=body,
+def collect_task_logs(ti):
+    log_path = (
+        f"/opt/airflow/logs/"
+        f"dag_id={ti.dag_id}/"
+        f"run_id={ti.run_id}/"
+        f"task_id={ti.task_id}/"
+        f"attempt={ti.try_number}.log"
     )
+
+    try:
+        with open(log_path, "r") as log_file:
+            return log_file.read()
+
+    except Exception as e:
+        logger.warning(
+            f"Unable to read task log from {log_path}: {e}"
+        )
+        return None
 
 def build_email_content(failure_context, ai_analysis):
     subject = (
@@ -135,6 +147,7 @@ def collect_failure_context(context):
             if exception
             else None
         ),
+        "task_logs": collect_task_logs(ti),
     }
     return failure_context
 
@@ -143,7 +156,6 @@ class FailureAnalysis(BaseModel):
     evidence: str
     suggested_fix: str
     confidence: str
-
 
 def analyze_failure_with_gemini(failure_context):
     client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
@@ -191,6 +203,9 @@ def analyze_failure_with_gemini(failure_context):
 
     TRACEBACK:
     {failure_context.get("traceback")}
+    
+    TASK LOGS:
+    {failure_context.get("task_logs")}
     """
 
     response = client.models.generate_content(
@@ -203,55 +218,3 @@ def analyze_failure_with_gemini(failure_context):
     )
 
     return response.parsed.model_dump()
-    
-    
-
-# def build_email_content(failure_context, ai_analysis):
-#     subject = f"[Airflow Failure] {failure_context.get('dag_id')} | {failure_context.get('task_id')}"
-#     body = textwrap.dedent(f"""
-#         Hello Team,
-#         An Airflow task has failed. Please find the execution details below.
-#         1. Failure Details
-#         DAG: {failure_context.get("dag_id")}
-#         Task: {failure_context.get("task_id")}
-#         Run ID: {failure_context.get("run_id")}
-#         Execution Date: {failure_context.get("execution_date")}
-#         Attempt: {failure_context.get("try_number")}
-
-#         2. Error Information
-#         Exception:
-#         {failure_context.get("exception")}
-#         Traceback:
-#         {failure_context.get("traceback")}
-        
-#         3. AI Analysis
-#         Root Cause:
-#         {ai_analysis.get("root_cause")}
-
-#         Evidence:
-#         {ai_analysis.get("evidence")}
-
-#         Suggested Fix:
-#         {ai_analysis.get("suggested_fix")}
-
-#         Confidence:
-#         {ai_analysis.get("confidence")}
-#     """).strip()
-    
-#     return subject,body
-          
-
-
-with DAG(
-    dag_id="email_notification_test",
-    start_date=datetime(2026, 1, 1),
-    schedule=None,
-    catchup=False,
-    
-) as dag:
-
-    failing_task = PythonOperator(
-        task_id="intentional_failure",
-        python_callable=intentional_failure,
-        on_failure_callback=failure_callback,
-    )
