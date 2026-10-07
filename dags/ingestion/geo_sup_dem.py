@@ -37,14 +37,20 @@ with DAG(
         task_id="batch_id_generation_extraction",
         bash_command="python /opt/project/generic_scripts/batch_id_generation_extraction.py geo_sup_bs_6 landing",
     )
+    date_range_generation = BashOperator(
+            task_id="date_range_generation",
+            bash_command=(
+                "cd /opt/project && "
+                "python -m generic_scripts.date_range_generator "
+            ),
+        )
     tlc_taxi_data_downloader_extraction_to_s3 = BashOperator(
         task_id="tlc_taxi_data_downloader_extraction_to_s3",
         bash_command=(
             "python /opt/project/generic_scripts/tlc_fetcher.py "
+            "geo_sup_bs_6 landing "
             "--taxi-type yellow green fhv hvfhv "
-            "--start-date 2024-01 "
-            "--end-date 2024-01 "
-            "geo_sup_bs_6 landing"
+            
         ),
     )
     tlc_taxi_data_lookup_downloader_extraction_to_s3 = BashOperator(
@@ -66,6 +72,6 @@ with DAG(
     
     
     # Dependencies
-    empty_operator_1 >> batch_id_generation_extraction >> tlc_taxi_data_downloader_extraction_to_s3 >> tlc_taxi_data_lookup_downloader_extraction_to_s3 >> landing_archival >>  empty_operator_2
+    empty_operator_1 >> batch_id_generation_extraction >> date_range_generation >> tlc_taxi_data_downloader_extraction_to_s3 >> tlc_taxi_data_lookup_downloader_extraction_to_s3 >> landing_archival >>  empty_operator_2
 
 

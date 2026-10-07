@@ -20,6 +20,7 @@ except ModuleNotFoundError:  # pragma: no cover - optional dependency for local/
     pq = None
 
 from generic_scripts.utils.hive_connection import get_hive_connection
+from generic_scripts.utils.hive_parquet import convert_parquet_for_hive
 from generic_scripts.utils.s3_utils import (
     get_bucket_name,
     read_etl_batch_id,
@@ -176,6 +177,7 @@ def validate_parquet(local_path):
         raise ValueError(
             f"Invalid Parquet file: {local_path}"
         ) from error
+
 
 def build_s3_key(taxi_type, year_month, file_name, etl_batch_id):
     year, month = year_month.split("-")
@@ -352,7 +354,11 @@ def main():
                 download_file(url, local_path)
                 validate_download(local_path)
                 validate_parquet(local_path)
-                write_s3_path(bucket_name, s3_key, local_path)
+                hive_compatible_path = convert_parquet_for_hive(local_path)
+                try:
+                    write_s3_path(bucket_name, s3_key, hive_compatible_path)
+                finally:
+                    hive_compatible_path.unlink(missing_ok=True)
 
                 try:
                     conn = get_hive_connection()

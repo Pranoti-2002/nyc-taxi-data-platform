@@ -15,6 +15,7 @@ import geopandas as gpd
 import requests
 from dotenv import load_dotenv
 from generic_scripts.utils.s3_utils import write_s3_path,s3_object_exists
+from generic_scripts.utils.hive_parquet import convert_parquet_for_hive
 
 logging.basicConfig(
     level=logging.INFO,
@@ -237,12 +238,15 @@ def main() -> None:
             output_path=TAXI_ZONES_PARQUET_PATH,
         )
 
-        # Upload GeoParquet to S3
-        write_s3_path(
-            file_path=TAXI_ZONES_PARQUET_PATH,
-            bucket=bucket_name,
-            s3_key=TAXI_ZONES_PARQUET_S3_KEY,
-        )
+        hive_compatible_path = convert_parquet_for_hive(TAXI_ZONES_PARQUET_PATH)
+        try:
+            write_s3_path(
+                file_path=hive_compatible_path,
+                bucket=bucket_name,
+                s3_key=TAXI_ZONES_PARQUET_S3_KEY,
+            )
+        finally:
+            hive_compatible_path.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
