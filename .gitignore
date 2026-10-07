@@ -82,3 +82,6 @@ Thumbs.db
 tmp/
 temp/
 parfiles/
+!/parfiles/
+/parfiles/*
+!/parfiles/processing_range.txt

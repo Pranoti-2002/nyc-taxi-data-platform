@@ -374,15 +374,54 @@ services:
   # Hive Metastore
   # ==========================================================
 
-  hive:
+  hive-schema-init:
     build:
       context: .
       dockerfile: docker/hive/Dockerfile
-    hostname: hive
 
     depends_on:
       postgres:
         condition: service_healthy
+
+    env_file:
+      - .env
+
+    environment:
+      HADOOP_CLASSPATH: /opt/hive/lib/*
+      HIVE_AUX_JARS_PATH: /opt/hive/lib/postgresql.jar
+
+    entrypoint: ["/bin/bash", "-ec"]
+    command:
+      - |
+        if /opt/hive/bin/schematool \
+          -dbType postgres \
+          -driver org.postgresql.Driver \
+          -url "jdbc:postgresql://postgres:5432/$${HIVE_METASTORE_DB}" \
+          -userName "$${HIVE_METASTORE_USER}" \
+          -passWord "$${HIVE_METASTORE_PASSWORD}" \
+          -info; then
+          echo "Hive metastore schema is already initialized."
+        else
+          echo "Initializing Hive metastore schema."
+          /opt/hive/bin/schematool \
+            -dbType postgres \
+            -driver org.postgresql.Driver \
+            -url "jdbc:postgresql://postgres:5432/$${HIVE_METASTORE_DB}" \
+            -userName "$${HIVE_METASTORE_USER}" \
+            -passWord "$${HIVE_METASTORE_PASSWORD}" \
+            -initSchema
+        fi
+
+  hive:
+    build:
+      context: .
+      dockerfile: docker/hive/Dockerfile
+    container_name: hive
+    hostname: hive
+
+    depends_on:
+      hive-schema-init:
+        condition: service_completed_successfully
 
     env_file:
       - .env
@@ -520,4 +559,4 @@ volumes:
 
 networks:
   default:
-    name: nyc-taxi-data-platform-network
+    name: etl-ai-project-network
