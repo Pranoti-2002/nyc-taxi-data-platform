@@ -85,3 +85,4 @@ parfiles/
 !/parfiles/
 /parfiles/*
 !/parfiles/processing_range.txt
+/parfiles/
