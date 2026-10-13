@@ -25,9 +25,6 @@ with DAG(
             "cd /opt/project && "
             "python generic_scripts/schema_inspector.py "
             "/opt/project/data/bronze/yellow_tripdata_2024-01.parquet "
-            "/opt/project/data/bronze/green_tripdata_2024-01.parquet "
-            "/opt/project/data/bronze/fhv_tripdata_2024-01.parquet "
-            "/opt/project/data/bronze/fhvhv_tripdata_2024-01.parquet "
             "--output-file /opt/project/data/schema_outputs/tlc_schemas.txt"
         ),
     )
