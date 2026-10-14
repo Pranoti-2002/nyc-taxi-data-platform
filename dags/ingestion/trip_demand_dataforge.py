@@ -1,9 +1,7 @@
 from datetime import datetime
-
+from airflow.operators.empty import EmptyOperator
 from airflow import DAG
 from airflow.providers.standard.operators.bash import BashOperator
-import pendulum
-
 
 
 with DAG(
@@ -13,20 +11,13 @@ with DAG(
     catchup=False,
     tags=["nyc-taxi", "ingestion"],
 ) as dag:
+    start = EmptyOperator(task_id="start")
     batch_id_generation = BashOperator(
         task_id="batch_id_generation",
         bash_command=(
             "cd /opt/project && "
             "python -m generic_scripts.batch_id_generation_extraction "
             "trip_demand_dataforge landing"
-        ),
-    )
-    weather_batch_id_generation = BashOperator(
-        task_id="weather_batch_id_generation",
-        bash_command=(
-            "cd /opt/project && "
-            "python -m generic_scripts.batch_id_generation_extraction "
-            "nyc_weather landing"
         ),
     )
     date_range_generation = BashOperator(
@@ -47,15 +38,6 @@ with DAG(
             "python generic_scripts/lookup_fetcher.py"
         ),
     )
-    weather_ingestion = BashOperator(
-        task_id="weather_ingestion",
-        bash_command=(
-            "cd /opt/project && "
-            "python generic_scripts/weather_fetcher.py "
-            "--bucket-name dataforge-lake "
-            "nyc_weather"
-        ),
-    )
-    
-    
-batch_id_generation >> date_range_generation >> fetch_source_files >> weather_batch_id_generation >> weather_ingestion
+    end = EmptyOperator(task_id="end")
+
+start >> batch_id_generation >> date_range_generation >> fetch_source_files >> end
