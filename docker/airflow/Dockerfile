@@ -1,3 +1,5 @@
+FROM apache/spark:3.5.5 AS spark-client
+
 FROM apache/airflow:3.3.1-python3.11
 
 USER root
@@ -10,7 +12,9 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-ENV PATH="${JAVA_HOME}/bin:${PATH}"
+COPY --from=spark-client /opt/spark /opt/spark
+ENV SPARK_HOME=/opt/spark
+ENV PATH="${SPARK_HOME}/bin:${JAVA_HOME}/bin:${PATH}"
 
 # Create a writable temporary directory for the airflow user
 RUN mkdir -p /opt/airflow/tmp \

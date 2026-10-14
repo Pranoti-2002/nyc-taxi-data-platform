@@ -45,6 +45,20 @@ Start the platform with:
 docker compose up --build
 ```
 
+Compose initializes the Hive metastore schema in PostgreSQL before starting Hive.
+If the schema is already initialized, the setup step leaves it unchanged.
+Parquet files uploaded for Hive tables are rewritten with Hive 3-compatible
+INT96 timestamps before they are uploaded to S3. Rebuild the Airflow services
+after changing their dependencies or ingestion code:
+
+```bash
+docker compose up -d --build airflow-init airflow-apiserver airflow-scheduler airflow-dag-processor airflow-triggerer
+```
+
+Existing S3 objects are not rewritten when the fetcher finds that an object
+already exists; they need a separate backfill before Hive can read those
+partitions reliably.
+
 ## Data Layers
 
 ### Bronze

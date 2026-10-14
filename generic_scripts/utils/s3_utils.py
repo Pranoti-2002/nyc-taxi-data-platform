@@ -96,8 +96,8 @@ def read_etl_batch_id(etl_batch_id_path, source_system):
 
     project_root = Path(__file__).resolve().parents[2]
     batch_file_candidates = [
-        project_root / "parfiles" / source_system / "etl_batch_id.txt",
         project_root / "parfiles" / source_system / f"{source_system}_batch_id.txt",
+        project_root / "parfiles" / source_system / "etl_batch_id.txt",
     ]
 
     for candidate_path in batch_file_candidates:

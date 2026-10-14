@@ -4,6 +4,7 @@ from airflow.operators.bash import BashOperator
 from datetime import datetime, timedelta
 import pendulum
 from airflow.operators.empty import EmptyOperator
+from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator   
 
 
 # Define the local timezone
@@ -48,10 +49,17 @@ with DAG(
                 task_id="landing_archival",
                 bash_command="python /opt/project/generic_scripts/landing_archival.py cv1 dataforge_audit batch_log",
             )
+    test_spark = SparkSubmitOperator(
+        task_id="test_spark",
+        application="/opt/project/generic_scripts/test_spark.py",
+        conn_id="spark_default",
+        name="airflow_spark_connection_test",
+        deploy_mode="client",
+    )
     empty_operator_2 = EmptyOperator(task_id = 'end')
     
     
     # Dependencies
-    empty_operator_1 >> batch_id_generation >> parameter_generation >> landing_archival >>  empty_operator_2
+    empty_operator_1 >> batch_id_generation >> parameter_generation >> landing_archival >> test_spark >>  empty_operator_2
 
 

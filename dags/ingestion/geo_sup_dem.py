@@ -3,7 +3,9 @@ from airflow.operators.python import PythonOperator
 from airflow.operators.bash import BashOperator
 from datetime import datetime, timedelta
 import pendulum
+import os
 from airflow.operators.empty import EmptyOperator
+from generic_scripts.utils.failure_notification import failure_callback
 
 
 # Define the local timezone
@@ -13,14 +15,13 @@ local_tz = pendulum.timezone("Asia/Kolkata")
 default_args = {
     "owner" : "HorizonChaser12",
     "depends_on_past" : False,
-    "email_on_failure" : True,
+    "email_on_failure" : False,
     "email_on_retry" : False,
-    "email" : "suryakant.mangaraj@gmail.com",
     # "retries" : 1,
     "max_active_runs" : 5,
     "dagrun_timeout" : timedelta(hours=1),
     "start_date" : datetime(2026, 5, 1, tzinfo=local_tz),
-    # "end_date" : 
+    "on_failure_callback": failure_callback(os.getenv("receiver_1")), 
 }
 
 with DAG(
@@ -36,14 +37,20 @@ with DAG(
         task_id="batch_id_generation_extraction",
         bash_command="python /opt/project/generic_scripts/batch_id_generation_extraction.py geo_sup_bs_6 landing",
     )
+    date_range_generation = BashOperator(
+            task_id="date_range_generation",
+            bash_command=(
+                "cd /opt/project && "
+                "python -m generic_scripts.date_range_generator "
+            ),
+        )
     tlc_taxi_data_downloader_extraction_to_s3 = BashOperator(
-        task_id="tlc_yellow_taxi_data_downloader_extraction_to_s3",
+        task_id="tlc_taxi_data_downloader_extraction_to_s3",
         bash_command=(
             "python /opt/project/generic_scripts/tlc_fetcher.py "
+            "geo_sup_bs_6 landing "
             "--taxi-type yellow green fhv hvfhv "
-            "--start-date 2024-01 "
-            "--end-date 2024-01 "
-            "geo_sup_bs_6 landing"
+            
         ),
     )
     tlc_taxi_data_lookup_downloader_extraction_to_s3 = BashOperator(
@@ -58,13 +65,13 @@ with DAG(
             "python /opt/project/generic_scripts/landing_archival.py geo_sup_bs_6 dataforge_landing yellow_taxi && "
             "python /opt/project/generic_scripts/landing_archival.py geo_sup_bs_6 dataforge_landing green_taxi && "
             "python /opt/project/generic_scripts/landing_archival.py geo_sup_bs_6 dataforge_landing fhv_trips && "
-            "python /opt/project/generic_scripts/landing_archival.py geo_sup_bs_6 dataforge_landing hvfhv_trips"
+            "python /opt/project/generic_scripts/landing_archival.py geo_sup_bs_6 dataforge_landing fhvhv_trips"
         ),
     )
     empty_operator_2 = EmptyOperator(task_id = 'end')
     
     
     # Dependencies
-    empty_operator_1 >> batch_id_generation_extraction >> tlc_taxi_data_downloader_extraction_to_s3 >> tlc_taxi_data_lookup_downloader_extraction_to_s3 >> landing_archival >>  empty_operator_2
+    empty_operator_1 >> batch_id_generation_extraction >> date_range_generation >> tlc_taxi_data_downloader_extraction_to_s3 >> tlc_taxi_data_lookup_downloader_extraction_to_s3 >> landing_archival >>  empty_operator_2
 
 
