@@ -84,6 +84,8 @@ def generate_etl_batch_id(cursor, source_system: str, phase_name: str) -> str:
         record_count_processed = 0
         record_count_failed = 0
         error_message = ""
+        cursor.execute("SET hive.stats.autogather=false")
+        cursor.execute("SET hive.stats.column.autogather=false")
 
         insert_query = """
         INSERT INTO dataforge_audit.batch_log 
