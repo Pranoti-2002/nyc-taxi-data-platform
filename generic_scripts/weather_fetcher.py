@@ -13,6 +13,7 @@ from pathlib import Path
 import boto3 
 import calendar
 import requests
+from generic_scripts.utils.s3_utils import s3_object_exists
 
 
 OPEN_METEO_URL = "https://archive-api.open-meteo.com/v1/archive"
@@ -356,7 +357,7 @@ def read_etl_batch_id(source_system: str) -> str:
     batch_id_file = (
         Path("parfiles")
         / source_system
-        / "etl_batch_id.txt"
+        / "nyc_weather_etl_batch_id.txt"
     )
 
     if not batch_id_file.exists():
@@ -458,11 +459,17 @@ def main():
             "RAW S3 key: %s",
             raw_s3_key,
         )
-        upload_to_s3(
-            local_file_path=output_path,
-            bucket_name=args.bucket_name,
-            s3_key=raw_s3_key,
-        )       
+        if s3_object_exists(bucket_name=args.bucket_name, s3_key=raw_s3_key,):
+            logger.info(
+                "File already exists in S3: s3://%s/%s. Skipping upload.",args.bucket_name,
+                raw_s3_key,
+            )
+        else:
+            upload_to_s3(
+                local_file_path=output_path,
+                bucket_name=args.bucket_name,
+                s3_key=raw_s3_key,
+            )       
     logger.info("NYC weather ingestion completed successfully")
 
 if __name__ == "__main__":
