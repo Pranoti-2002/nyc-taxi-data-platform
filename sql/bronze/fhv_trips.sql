@@ -2,9 +2,9 @@ CREATE EXTERNAL TABLE IF NOT EXISTS dataforge_landing.fhv_trips (
     dispatching_base_num STRING,
     pickup_datetime TIMESTAMP,        
     dropOff_datetime TIMESTAMP,         
-    PUlocationID BIGINT,        
-    DOlocationID BIGINT,               
-    SR_Flag BIGINT,               
+    PUlocationID DOUBLE,        
+    DOlocationID DOUBLE,               
+    SR_Flag STRING,               
     Affiliated_base_number STRING             
 )
 PARTITIONED BY (

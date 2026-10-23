@@ -51,7 +51,7 @@ with DAG(
             )
     test_spark = SparkSubmitOperator(
         task_id="test_spark",
-        application="/opt/project/generic_scripts/test_spark.py",
+        application="/opt/project/src/transformation/pyspark_scripts/green_taxi.py",
         conn_id="spark_default",
         name="airflow_spark_connection_test",
         deploy_mode="client",

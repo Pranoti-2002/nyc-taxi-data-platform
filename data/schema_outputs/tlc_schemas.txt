@@ -1,18 +1,18 @@
 ================================================================================
-FILE: /opt/project/data/bronze/yellow_tripdata_2024-01.parquet
+FILE: /opt/project/data/bronze/yellow_tripdata_2020-01.parquet
 ================================================================================
 
 Column Name                        Data Type                     Nullable  
 --------------------------------------------------------------------------------
-VendorID                           int32                         True      
+VendorID                           int64                         True      
 tpep_pickup_datetime               timestamp[us]                 True      
 tpep_dropoff_datetime              timestamp[us]                 True      
-passenger_count                    int64                         True      
+passenger_count                    double                        True      
 trip_distance                      double                        True      
-RatecodeID                         int64                         True      
-store_and_fwd_flag                 large_string                  True      
-PULocationID                       int32                         True      
-DOLocationID                       int32                         True      
+RatecodeID                         double                        True      
+store_and_fwd_flag                 string                        True      
+PULocationID                       int64                         True      
+DOLocationID                       int64                         True      
 payment_type                       int64                         True      
 fare_amount                        double                        True      
 extra                              double                        True      
@@ -22,6 +22,6 @@ tolls_amount                       double                        True
 improvement_surcharge              double                        True      
 total_amount                       double                        True      
 congestion_surcharge               double                        True      
-Airport_fee                        double                        True      
+airport_fee                        null                          True      
 --------------------------------------------------------------------------------
 Total columns: 19

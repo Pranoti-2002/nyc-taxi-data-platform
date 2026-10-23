@@ -34,7 +34,7 @@ with DAG(
             "cd /opt/project && "
             "python generic_scripts/tlc_fetcher.py "
             "trip_demand_dataforge landing "
-            "--taxi-type yellow && "
+            "--taxi-type yellow green fhv hvfhv && "
             "python generic_scripts/lookup_fetcher.py"
         ),
     )
