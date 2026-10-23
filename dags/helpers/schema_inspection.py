@@ -15,7 +15,7 @@ with DAG(
         bash_command=(
             "cd /opt/project && "
             "python generic_scripts/schema_inspector.py "
-            "/opt/project/data/bronze/yellow_tripdata_2024-01.parquet "
+            "/opt/project/data/bronze/yellow_tripdata_2020-01.parquet "
             "--output-file /opt/project/data/schema_outputs/tlc_schemas.txt"
         ),
     )
@@ -25,7 +25,7 @@ with DAG(
         bash_command=(
             "cd /opt/project && "
             "python generic_scripts/schema_inspector.py "
-            "data/bronze/lookup/taxi_zone_lookup.csv "
+            "/opt/project/data/bronze/lookup/taxi_zone_lookup.csv "
             "--output-file /opt/project/data/schema_outputs/lookup_schema.txt"
         ),
     )

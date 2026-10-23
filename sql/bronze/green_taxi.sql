@@ -1,12 +1,12 @@
 CREATE EXTERNAL TABLE IF NOT EXISTS dataforge_landing.green_taxi(
-    VendorID INT, 
+    VendorID BIGINT, 
     lpep_pickup_datetime TIMESTAMP,          
     lpep_dropoff_datetime TIMESTAMP,           
     store_and_fwd_flag STRING,              
-    RatecodeID  BIGINT,                      
-    PULocationID  INT,                     
-    DOLocationID  INT,                      
-    passenger_count BIGINT,                      
+    RatecodeID  DOUBLE,                      
+    PULocationID  BIGINT,                     
+    DOLocationID  BIGINT,                      
+    passenger_count DOUBLE,                      
     trip_distance DOUBLE,                                          
     fare_amount DOUBLE,                                            
     extra DOUBLE,                                                  
@@ -16,8 +16,8 @@ CREATE EXTERNAL TABLE IF NOT EXISTS dataforge_landing.green_taxi(
     ehail_fee  DOUBLE,                                             
     improvement_surcharge DOUBLE,                                  
     total_amount DOUBLE,                                        
-    payment_type BIGINT,                                           
-    trip_type BIGINT,                                                
+    payment_type DOUBLE,                                           
+    trip_type DOUBLE,                                                
     congestion_surcharge DOUBLE
 )
 PARTITIONED BY (

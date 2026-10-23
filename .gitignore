@@ -85,3 +85,5 @@ parfiles/
 !/parfiles/
 /parfiles/*
 !/parfiles/processing_range.txt
+
+generic_scripts/test_vendor_id_col.py
